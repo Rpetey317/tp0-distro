@@ -1,6 +1,11 @@
 name: tp0
 services:
   server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    volumes:
+      - ./server/config.ini:/config.ini
     container_name: server
     image: server:latest
     entrypoint: python3 /main.py
@@ -11,6 +16,11 @@ services:
       - testing_net
 
   client1:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    volumes:
+      - ./client/config.yaml:/config.yaml
     container_name: client1
     image: client:latest
     entrypoint: /client
