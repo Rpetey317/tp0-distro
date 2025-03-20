@@ -15,7 +15,7 @@ def generate_compose(input_file, output_file, num_clients):
         compose_data['services'][f'client{i}'] = new_client
     
     with open(output_file, 'w') as f:
-        yaml.dump(compose_data, f, default_flow_style=False)
+        yaml.dump(compose_data, f, default_flow_style=False, sort_keys=False, indent=2)
 
 def main():
     if len(sys.argv) != 3:
