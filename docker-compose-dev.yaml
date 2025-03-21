@@ -30,18 +30,6 @@ services:
     depends_on:
       - server
 
-  test:
-    build:
-      context: .
-      dockerfile: test-server/Dockerfile
-    container_name: test
-    entrypoint: /bin/bash /netcat_test.sh
-    image: test-server:latest
-    networks:
-      - testing_net
-    depends_on:
-      - server
-
 networks:
   testing_net:
     ipam:

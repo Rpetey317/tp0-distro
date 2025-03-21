@@ -94,10 +94,6 @@ def write_compose_file(services, output_file, num_clients):
         write_dict(f, services["services"]["server"], 4)
         f.write("\n")
         
-        f.write("  test:\n")
-        write_dict(f, services["services"]["test"], 4)
-        f.write("\n")
-        
         client_template = services["services"]["client1"]
         for i in range(1, num_clients + 1):
             client = deepcopy(client_template)
