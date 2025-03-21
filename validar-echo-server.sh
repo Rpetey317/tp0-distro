@@ -1,11 +1,15 @@
 #!/bin/bash
 
-echo "Starting server..."
-make docker-compose-up
-sleep 2
+if ! docker compose -f docker-compose-dev.yaml ps | grep -q "server"; then
+    echo "Starting server..."
+    docker compose -f docker-compose-dev.yaml up -d server
+    sleep 2
+else
+    echo "Server already running"
+fi
 
 echo "Running test..."
-docker compose -f docker-compose-dev.yaml run --rm test bash -c "$(cat test-server/netcat_test.sh)"
+docker compose -f docker-compose-dev.yaml up -d test"
 
 TEST_RESULT=$?
 
@@ -16,4 +20,5 @@ else
     echo "action: test_echo_server | result: fail"
 fi
 
-make docker-compose-down
+echo "Cleaning up..."
+docker compose -f docker-compose-dev.yaml down -t 0 > /dev/null 2>&1
