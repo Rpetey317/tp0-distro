@@ -30,6 +30,13 @@ services:
     depends_on:
       - server
 
+  test:
+    image: ubuntu:latest
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
 networks:
   testing_net:
     ipam:
