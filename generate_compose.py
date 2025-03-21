@@ -77,7 +77,7 @@ def write_compose_file(services, output_file, num_clients):
             elif isinstance(value, list):
                 f.write(" " * indent + f"{key}:\n")
                 for item in value:
-                    f.write(" " * indent + f"- {item}\n")
+                    f.write(" " * (indent+2) + f"- {item}\n")
             else:
                 if isinstance(value, str) and (" " in value or ":" in value):
                     f.write(" " * indent + f'{key}: "{value}"\n')
@@ -94,7 +94,10 @@ def write_compose_file(services, output_file, num_clients):
         write_dict(f, services["services"]["server"], 4)
         f.write("\n")
         
-        # Write client services
+        f.write("  test:\n")
+        write_dict(f, services["services"]["test"], 4)
+        f.write("\n")
+        
         client_template = services["services"]["client1"]
         for i in range(1, num_clients + 1):
             client = deepcopy(client_template)
@@ -105,7 +108,6 @@ def write_compose_file(services, output_file, num_clients):
             write_dict(f, client, 4)
             f.write("\n")
             
-        # Write networks section
         f.write("networks:\n")
         write_dict(f, services["networks"], 2)
 
