@@ -9,7 +9,7 @@ else
 fi
 
 echo "Running test..."
-docker compose -f docker-compose-dev.yaml up -d test"
+docker compose -f docker-compose-dev.yaml up -d test
 
 TEST_RESULT=$?
 
