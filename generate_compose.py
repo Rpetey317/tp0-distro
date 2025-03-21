@@ -119,11 +119,11 @@ def main():
     output_file = sys.argv[1]
     try:
         n_clients = int(sys.argv[2])
-        if n_clients < 1:
-            raise ValueError(f"{n_clients} is not a positive number.")
+        if n_clients < 0:
+            raise ValueError(f"{n_clients} is a negative number.")
     except ValueError as e:
         print(f"Error parsing number of clients: {e}")
-        print("The second argument must be a positive integer")
+        print("The second argument must be a non-negative integer")
         sys.exit(1)
     
     compose_dict = read_compose_file('docker-compose-dev.yaml')
