@@ -31,7 +31,12 @@ services:
       - server
 
   test:
-    image: ubuntu:latest
+    build:
+      context: .
+      dockerfile: test-server/Dockerfile
+    container_name: test
+    entrypoint: /bin/bash /netcat_test.sh
+    image: test-server:latest
     networks:
       - testing_net
     depends_on:

@@ -1,14 +1,12 @@
 #!/bin/bash
 
-if ! docker compose ps | grep -q "server.*running"; then
-    echo "Starting server..."
-    docker compose up -d server
-    sleep 2
-else
-    echo "Server already running"
-fi
+echo "Starting server..."
+make docker-compose-up
+sleep 2
 
-docker compose run --rm test bash -c "$(cat netcat_test.sh)"
+echo "Running test..."
+docker compose -f docker-compose-dev.yaml run --rm test bash -c "$(cat test-server/netcat_test.sh)"
+
 TEST_RESULT=$?
 
 # Report result in required format
@@ -18,4 +16,4 @@ else
     echo "action: test_echo_server | result: fail"
 fi
 
-docker compose down -t 0 > /dev/null 2>&1 
+make docker-compose-down
