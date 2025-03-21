@@ -9,7 +9,8 @@ else
 fi
 
 echo "Running test..."
-docker compose -f docker-compose-dev.yaml up -d test
+# Use docker run directly, connecting to the existing network
+docker run --rm --network tp0_testing_net ubuntu bash -c "$(cat test-server/netcat_test.sh)"
 
 TEST_RESULT=$?
 
