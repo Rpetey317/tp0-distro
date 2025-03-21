@@ -1,21 +1,113 @@
 import sys
-import yaml
 from copy import deepcopy
 
-def generate_compose(input_file, output_file, num_clients):
-    with open(input_file, 'r') as f:
-        compose_data = yaml.safe_load(f)
+# this is so overkill
+
+def read_compose_file(filename: str) -> dict:
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+
+    result = {}
+    current_dict = result
+    indent_stack = [(0, current_dict)]
+    in_array = False
+    current_array = []
+    array_indent = 0
     
-    client_template = deepcopy(compose_data['services']['client1'])
-    
-    for i in range(2, num_clients + 1):
-        new_client = deepcopy(client_template)
-        new_client['container_name'] = f'client{i}'
-        new_client['environment'] = [f'CLI_ID={i}', 'CLI_LOG_LEVEL=DEBUG']
-        compose_data['services'][f'client{i}'] = new_client
-    
+    for line in lines:
+        if not line.strip() or line.strip().startswith('#'):
+            continue
+            
+        indent = len(line) - len(line.lstrip())
+        line = line.strip()
+        
+        if line == '-':
+            in_array = True
+            array_indent = indent
+            continue
+            
+        if line.startswith('- '):
+            in_array = True
+            array_indent = indent
+            line = line[2:]
+            current_array.append(line)
+            continue
+
+        if in_array and indent == array_indent:
+            current_array.append(line)
+            continue
+            
+        if in_array and indent < array_indent:
+            in_array = False
+            current_dict[list(current_dict.keys())[-1]] = current_array
+            current_array = []
+            
+        if ':' in line:
+            key, value = [x.strip() for x in line.split(':', 1)]
+            
+            while indent_stack and indent <= indent_stack[-1][0]:
+                indent_stack.pop()
+                
+            current_dict = indent_stack[-1][1] if len(indent_stack) > 0 else result
+
+            if value:
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                elif value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+            
+            if not value:
+                current_dict[key] = {}
+                indent_stack.append((indent, current_dict[key]))
+            else:
+                current_dict[key] = value
+
+    if in_array:
+        current_dict[list(current_dict.keys())[-1]] = current_array
+                
+    print(result)
+    return result
+
+def write_compose_file(services, output_file, num_clients):
+    def write_dict(f, d, indent=0):
+        for key, value in d.items():
+            if isinstance(value, dict):
+                f.write(" " * indent + f"{key}:\n")
+                write_dict(f, value, indent + 2)
+            elif isinstance(value, list):
+                f.write(" " * indent + f"{key}:\n")
+                for item in value:
+                    f.write(" " * indent + f"- {item}\n")
+            else:
+                if isinstance(value, str) and (" " in value or ":" in value):
+                    f.write(" " * indent + f'{key}: "{value}"\n')
+                else:
+                    f.write(" " * indent + f"{key}: {value}\n")
+
     with open(output_file, 'w') as f:
-        yaml.dump(compose_data, f, default_flow_style=False, sort_keys=False, indent=2)
+        if "name" in services:
+            f.write(f"name: {services['name']}\n")
+        
+        f.write("services:\n")
+        
+        f.write("  server:\n")
+        write_dict(f, services["services"]["server"], 4)
+        f.write("\n")
+        
+        # Write client services
+        client_template = services["services"]["client1"]
+        for i in range(1, num_clients + 1):
+            client = deepcopy(client_template)
+            client["container_name"] = f"client{i}"
+            client["environment"] = [f"CLI_ID={i}"]
+            
+            f.write(f"  client{i}:\n")
+            write_dict(f, client, 4)
+            f.write("\n")
+            
+        # Write networks section
+        f.write("networks:\n")
+        write_dict(f, services["networks"], 2)
 
 def main():
     if len(sys.argv) != 3:
@@ -32,7 +124,8 @@ def main():
         print("The second argument must be a positive integer")
         sys.exit(1)
     
-    generate_compose('docker-compose-dev.yaml', output_file, n_clients)
+    compose_dict = read_compose_file('docker-compose-dev.yaml')
+    write_compose_file(compose_dict, output_file, n_clients)
     print(f"Generated {output_file} with {n_clients} client services")
 
 if __name__ == "__main__":
