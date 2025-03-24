@@ -1,13 +1,11 @@
 import socket
 import logging
 import signal
-
+from protocol import ServerProtocol
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
-        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server_socket.bind(('', port))
-        self._server_socket.listen(listen_backlog)
+        self._protocol = ServerProtocol(port, listen_backlog)
 
     def run(self):
         """
@@ -24,8 +22,8 @@ class Server:
                 logging.info('action: shutdown | result: in_progress')
                 
                 # this check is to avoid race conditions when closing the server shortly after starting it
-                if hasattr(self, '_server_socket'):
-                    self._server_socket.close()
+                if hasattr(self, '_protocol'):
+                    self._protocol.shutdown()
                 logging.info('action: shutdown | result: success')
                 exit(0)
             else:
@@ -33,13 +31,7 @@ class Server:
             
         signal.signal(signal.SIGTERM, handle_sigterm)
         
-        while True:
-            try:
-                client_sock = self.__accept_new_connection()
-                self.__handle_client_connection(client_sock)
-            except Exception as e:
-                logging.error(f'action: server_loop | result: fail | error: {e}')
-                break
+        self._protocol.run()
 
     def __handle_client_connection(self, client_sock):
         """
