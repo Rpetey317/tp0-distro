@@ -131,8 +131,9 @@ func main() {
 		if sig == syscall.SIGTERM {
 			client.Shutdown()
 			log.Info("action: shutdown | result: success")
+			<-done
 		} else {
-			log.Warning("action: handle_signal | result: ignore | warning: signal %v not handled", sig)
+			log.Warning("action: handle_signal | result: fail | warning: signal %v not handled", sig)
 		}
 	case <-done:
 		log.Info("action: finish | result: success")

@@ -29,7 +29,7 @@ class Server:
                 logging.info('action: shutdown | result: success')
                 exit(0)
             else:
-                logging.warning(f'action: handle_signal | result: ignore | warning: signal {signum} not handled')
+                logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
         signal.signal(signal.SIGTERM, handle_sigterm)
         
