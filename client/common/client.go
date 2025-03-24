@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/op/go-logging"
@@ -23,13 +24,16 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
+	mutex  sync.Mutex
+	running bool
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config: config,
+		config:  config,
+		running: true,
 	}
 	return client
 }
@@ -51,12 +55,34 @@ func (c *Client) createClientSocket() error {
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
+// Shutdown Gracefully stops the client
+func (c *Client) Shutdown() {
+	c.mutex.Lock()
+	c.running = false
+	if c.conn != nil {
+		log.Info("action: shutdown | result: in_profress")
+		c.conn.Close()
+	}
+	c.mutex.Unlock()
+}
+
+// StartClientLoop modified to check running state
 func (c *Client) StartClientLoop() {
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+		
+		// If client is shut down, stop sending messages.
+		c.mutex.Lock()
+		if !c.running {
+			return
+		}
+		c.mutex.Unlock()
+
+		// Create a new connection for each message
+		if err := c.createClientSocket(); err != nil {
+			return
+		}
 
 		// TODO: Modify the send to avoid short-write
 		fmt.Fprintf(

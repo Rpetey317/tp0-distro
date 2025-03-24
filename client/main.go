@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/op/go-logging"
@@ -111,5 +113,28 @@ func main() {
 	}
 
 	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+	
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
+	// Start client in a goroutine
+	done := make(chan bool)
+	go func() {
+		client.StartClientLoop()
+		done <- true
+	}()
+
+	// Wait for either completion or signal
+	select {
+	case sig := <-sigChan:
+		if sig == syscall.SIGTERM {
+			client.Shutdown()
+			log.Info("action: shutdown | result: success")
+		} else {
+			log.Warning("action: handle_signal | result: ignore | warning: signal %v not handled", sig)
+		}
+	case <-done:
+		log.Info("action: finish | result: success")
+	}
 }
