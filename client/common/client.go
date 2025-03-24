@@ -60,7 +60,7 @@ func (c *Client) Shutdown() {
 	c.mutex.Lock()
 	c.running = false
 	if c.conn != nil {
-		log.Info("action: shutdown | result: in_profress")
+		log.Info("action: shutdown | result: in_progress")
 		c.conn.Close()
 	}
 	c.mutex.Unlock()
