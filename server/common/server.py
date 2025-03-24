@@ -1,6 +1,6 @@
 import socket
 import logging
-
+import signal
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -18,11 +18,28 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
+        
+        def handle_sigterm(signum, frame):
+            if signum == signal.SIGTERM:
+                logging.info('action: shutdown | result: in_progress')
+                
+                # this check is to avoid race conditions when closing the server shortly after starting it
+                if hasattr(self, '_server_socket'):
+                    self._server_socket.close()
+                logging.info('action: shutdown | result: success')
+                exit(0)
+            else:
+                logging.warning(f'action: handle_signal | result: ignore | warning: signal {signum} not handled')
+            
+        signal.signal(signal.SIGTERM, handle_sigterm)
+        
         while True:
-            client_sock = self.__accept_new_connection()
-            self.__handle_client_connection(client_sock)
+            try:
+                client_sock = self.__accept_new_connection()
+                self.__handle_client_connection(client_sock)
+            except Exception as e:
+                logging.error(f'action: server_loop | result: fail | error: {e}')
+                break
 
     def __handle_client_connection(self, client_sock):
         """
