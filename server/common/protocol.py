@@ -10,10 +10,12 @@ class ServerProtocol:
         
         self._running = True
         
+        logging.info(f"HOLAAAAAAAAAAAAAAAAAAAA")
+        
     def run(self):
         while self._running:
             try:
-                client_sock = self._socket.accept()
+                client_sock, _ = self._socket.accept()
                 self._handle_client_connection(client_sock)
             except OSError as e:
                 # socket was closed
@@ -31,12 +33,24 @@ class ServerProtocol:
 
     def _handle_client_connection(self, client_sock):
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
+            # Read message in chunks until we get EOF
+            chunks = []
+            received_eof = False
+            while not received_eof:
+                chunk = client_sock.recv(1024)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                if b'\n' in chunk:
+                    received_eof = True
+                    chunks[-1] = chunks[-1].rstrip(b'\0')
+
+            msg = b''.join(chunks).decode('utf-8')
+            
             addr = client_sock.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             
-            self.send_message("{}\n".format(msg), client_sock)
+            self.send_message(f"{msg}\n", client_sock)
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
@@ -44,9 +58,21 @@ class ServerProtocol:
 
     def send_message(self, message: any, client_sock: socket.socket):
         try:
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(message).encode('utf-8'))
+            msg = f"{message}\0".encode('utf-8')
+            total_sent = 0
+            while total_sent < len(msg):
+                sent = client_sock.send(msg[total_sent:])
+                if sent == 0:
+                    raise OSError("Socket connection broken")
+                total_sent += sent
+            
+            logging.info(f"action: send_message | result: success | msg: {message}")
         except OSError as e:
+            # socket closing isn't necessary an error, so it gets logged as a warning
+            logging.warning(f"action: send_message | result: fail | error: {e}")
+            raise e
+        except Exception as e:
             logging.error(f"action: send_message | result: fail | error: {e}")
+            raise e
         finally:
             client_sock.close()
