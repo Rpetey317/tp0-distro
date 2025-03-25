@@ -1,7 +1,7 @@
 from .utils import Bet
 from socket import ntohs
 import datetime
-
+import logging
 class ProtocolParser:
     """
     Helper class to parse messages from and to the client.
