@@ -58,7 +58,7 @@ class ServerProtocol:
             with self._mutex:
                 # Utils functions are not thread-safe, so we need a lock
                 store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: ${bet.document} | numero: ${bet.number}')
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
             
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
