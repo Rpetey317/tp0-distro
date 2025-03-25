@@ -12,6 +12,7 @@ class ServerProtocol:
         self._parser = ProtocolParser()
         
         self._mutex = threading.Lock()
+        self._socket_open = True
         
     def run(self):
         while self._running:
@@ -31,43 +32,43 @@ class ServerProtocol:
         logging.info('action: shutdown | result: in_progress')
         with self._mutex:
             self._running = False
-            self._socket.close()
+            if self._socket_open:
+                self._socket.close()
+                self._socket_open = False
 
     def recv_messages(self):
-        socket_closed = False
         bets = []
-        excess_bytes = []
-        while not socket_closed:
-            try:
-                # Read message in chunks until we get EOF
-                chunks = [excess_bytes] if excess_bytes else []
-                excess_bytes = []
-                received_eof = False
-                with self._mutex:
-                    while not received_eof:
-                        chunk = self._socket.recv(1024)
-                        if not chunk:
-                            break
-                        chunks.append(chunk)
-                        if b'\0' in chunk:
-                            received_eof = True
-                            excess_bytes = chunk.split(b'\0')[1]
-                            chunks[-1] = chunks[-1].split(b'\0')[0]
+        chunks = []
+        
+        try:
+            # Read message in chunks until socket closes
+            addr = self._socket.getpeername()
+            while self._socket_open:
+                try:
+                    chunk = self._socket.recv(1024)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                except OSError as e:
+                    # socket was closed
+                    logging.info(f"action: socket_closed | result: success")
+                    self._socket_open = False
+                    continue
+            if not chunks:
+                return bets
 
-                raw_msg = b''.join(chunks)
-                
-                addr = self._socket.getpeername()
-                logging.info(f'action: receive_message | result: success | ip: {addr[0]} | raw_msg: {raw_msg}')
-                
-                bets.append(self._parser.parse(raw_msg))
-            except OSError as e:
-                # socket was closed
-                logging.error(f"action: receive_message | result: fail | error: {e}")
-                socket_closed = True
-                continue
-            except Exception as e:
-                logging.error(f"action: receive_message | result: fail | error: {e}")
-                continue
+            raw_msg = b''.join(chunks)
+            
+            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | raw_msg: {raw_msg}')
+            
+            new_bets = self._parser.parse(raw_msg)
+            bets.extend(new_bets)
+            return bets
+        
+        except Exception as e:
+            logging.error(f"action: receive_message | result: fail | error: {e}")
+            return bets
+        
 
     def send_message(self, message: any):        
         try:

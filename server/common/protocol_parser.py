@@ -11,13 +11,20 @@ class ProtocolParser:
         if len(message) == 0:
             raise ValueError("Message is empty")
         
-        msg_enum = message[0]
-        if msg_enum == 0:
-            return self._parse_bet_request(message[1:])
-        elif msg_enum == 1:
-            return self._parse_batch_bet_request(message[1:])
-        else:
-            raise ValueError(f"Invalid message type: {msg_enum}")
+        bets = []
+        
+        while len(message) > 0:
+            msg_enum, read = self._parse_u8(message, 0)
+            if msg_enum == 0:
+                bet, message = self._parse_bet_request(message[1:])
+                bets.append(bet)
+            elif msg_enum == 1:
+                batch_bets, message = self._parse_batch_bet_request(message[1:])
+                bets.extend(batch_bets)
+            else:
+                raise ValueError(f"Invalid message type: {msg_enum}")
+        
+        return bets
             
     def serialize(self, message: any) -> bytes:
         pass
@@ -53,14 +60,15 @@ class ProtocolParser:
         
         return Bet("1", nombre, apellido, str(documento), nacimiento.strftime('%Y-%m-%d'), str(numero)), read
     
-    def _parse_bet_request(self, message: bytes) -> Bet:
-        bet, _ = self._parse_single_bet_request(message, 0)
-        return bet
+    def _parse_bet_request(self, message: bytes) -> tuple[Bet, bytes]:
+        bet, read = self._parse_single_bet_request(message, 0)
+        return bet, message[read:]
     
-    def _parse_batch_bet_request(self, message: bytes) -> list[Bet]:
+    def _parse_batch_bet_request(self, message: bytes) -> tuple[list[Bet], bytes]:
         read = 0
+        n_bets, read = self._parse_u16(message, read)
         bets = []
-        while read < len(message):
+        for _ in range(n_bets):
             bet, read = self._parse_single_bet_request(message, read)
             bets.append(bet)
-        return bets
+        return bets, message[read:]

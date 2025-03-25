@@ -121,6 +121,9 @@ func (p *Protocol) SendBetRequest(message BetRequest) error {
 
 func (p *Protocol) SendBetRequestBatch(message BetRequestBatch) error {
 	msg := []byte{1}
+	numBets := uint16(len(message.Bets))
+	numBetsBytes := []byte{byte(numBets >> 8), byte(numBets)}
+	msg = append(msg, numBetsBytes...)
 	for _, bet := range message.Bets {
 		request := serializeSingleBetRequest(bet)
 		msg = append(msg, request...)
