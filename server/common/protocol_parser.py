@@ -16,6 +16,8 @@ class ProtocolParser:
         msg_enum = message[0]
         if msg_enum == 0:
             return self._parse_bet_request(message[1:-1])
+        elif msg_enum == 1:
+            return self._parse_batch_bet_request(message[1:-1])
         else:
             raise ValueError(f"Invalid message type: {msg_enum}")
             
@@ -44,12 +46,24 @@ class ProtocolParser:
         day, read = self._parse_u8(message, read)
         return datetime.date(year, month, day), read
             
-    def _parse_bet_request(self, message: bytes) -> Bet:
-        read = 0
+    def _parse_single_bet_request(self, message: bytes, read: int) -> tuple[Bet, int]:
         nombre, read = self._parse_string(message, read)
         apellido, read = self._parse_string(message, read)
         documento, read = self._parse_u32(message, read)
         nacimiento, read = self._parse_date(message, read)
         numero, read = self._parse_u32(message, read)
         
-        return Bet("1", nombre, apellido, str(documento), nacimiento.strftime('%Y-%m-%d'), str(numero))
+        return Bet("1", nombre, apellido, str(documento), nacimiento.strftime('%Y-%m-%d'), str(numero)), read
+    
+    def _parse_bet_request(self, message: bytes) -> Bet:
+        bet, _ = self._parse_single_bet_request(message, 0)
+        return bet
+    
+    def _parse_batch_bet_request(self, message: bytes) -> list[Bet]:
+        read = 0
+        bets = []
+        num_bets, read = self._parse_u16(message, read)
+        for _ in range(num_bets):
+            bet, read = self._parse_single_bet_request(message, read)
+            bets.append(bet)
+        return bets

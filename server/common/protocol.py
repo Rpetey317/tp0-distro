@@ -5,11 +5,9 @@ from .protocol_parser import ProtocolParser
 from .utils import store_bets
 
 class ServerProtocol:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, socket: socket.socket):
         # Initialize socket
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.bind(('', port))
-        self._socket.listen(listen_backlog)
+        self._socket = socket
         
         self._running = True
         self._parser = ProtocolParser()
@@ -32,48 +30,44 @@ class ServerProtocol:
 
     def shutdown(self):
         logging.info('action: shutdown | result: in_progress')
-        self._running = False
-        self._socket.close()
+        with self._mutex:
+            self._running = False
+            self._socket.close()
 
-    def _handle_client_connection(self, client_sock):
+    def recv_message(self):
         try:
             # Read message in chunks until we get EOF
             chunks = []
             received_eof = False
-            while not received_eof:
-                chunk = client_sock.recv(1024)
-                if not chunk:
-                    break
-                chunks.append(chunk)
-                if b'\n' in chunk:
-                    received_eof = True
-                    chunks[-1] = chunks[-1].rstrip(b'\0')
+            with self._mutex:
+                while not received_eof:
+                    chunk = self._socket.recv(1024)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    if b'\0' in chunk:
+                        received_eof = True
+                        chunks[-1] = chunks[-1].rstrip(b'\0')
 
             raw_msg = b''.join(chunks)
             
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {raw_msg}')
+            addr = self._socket.getpeername()
+            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | raw_msg: {raw_msg}')
             
-            bet = self._parser.parse(raw_msg)
-            with self._mutex:
-                # Utils functions are not thread-safe, so we need a lock
-                store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-            
+            return self._parser.parse(raw_msg)            
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
-        finally:
-            client_sock.close()
 
-    def send_message(self, message: any, client_sock: socket.socket):
+    def send_message(self, message: any):        
         try:
             msg = f"{message}\0".encode('utf-8')
             total_sent = 0
-            while total_sent < len(msg):
-                sent = client_sock.send(msg[total_sent:])
-                if sent == 0:
-                    raise OSError("Socket connection broken")
-                total_sent += sent
+            with self._mutex:
+                while total_sent < len(msg):
+                    sent = self._socket.send(msg[total_sent:])
+                    if sent == 0:
+                        raise OSError("Socket connection broken")
+                    total_sent += sent
             
             logging.info(f"action: send_message | result: success | msg: {message}")
         except OSError as e:
@@ -83,5 +77,3 @@ class ServerProtocol:
         except Exception as e:
             logging.error(f"action: send_message | result: fail | error: {e}")
             raise e
-        finally:
-            client_sock.close()

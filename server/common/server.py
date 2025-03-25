@@ -5,8 +5,12 @@ from .protocol import ServerProtocol
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
-        self._protocol = ServerProtocol(port, listen_backlog)
-
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.bind(('', port))
+        self._socket.listen(listen_backlog)
+        
+        self._protocol = None
+        self._mutex = threading.Lock()
     def run(self):
         """
         Dummy Server loop
@@ -20,10 +24,8 @@ class Server:
         def handle_sigterm(signum, frame):
             if signum == signal.SIGTERM:
                 logging.info('action: shutdown | result: in_progress')
-                
-                # this check is to avoid race conditions when closing the server shortly after starting it
-                if hasattr(self, '_protocol'):
-                    self._protocol.shutdown()
+                with self._mutex:
+                    self.shutdown()
                 logging.info('action: shutdown | result: success')
                 exit(0)
             else:
@@ -31,4 +33,27 @@ class Server:
             
         signal.signal(signal.SIGTERM, handle_sigterm)
         
-        self._protocol.run()
+        while self._running:
+            try:
+                client_sock, _ = self._socket.accept()
+                self._protocol = ServerProtocol(client_sock)
+                bets = self._protocol.recv_message()
+                with self._mutex:
+                    store_bets(bets)
+                logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+            except OSError:
+                # socket was closed
+                continue
+            except Exception:
+                logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
+                continue
+            
+        logging.info('action: shutdown | result: success')
+
+    def shutdown(self):
+        logging.info('action: shutdown | result: in_progress')
+        self._running = False
+        if self._protocol:
+            self._protocol.shutdown()
+        self._socket.close()
+        
