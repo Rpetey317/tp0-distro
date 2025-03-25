@@ -50,8 +50,8 @@ class Server:
             except OSError:
                 # socket was closed
                 continue
-            except Exception:
-                logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
+            except Exception as e:
+                logging.error(f'action: recv_messages | result: fail | error: {e}')
                 logging.error(traceback.format_exc())
                 continue
             

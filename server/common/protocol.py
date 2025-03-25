@@ -2,7 +2,7 @@ import socket
 import logging
 import threading
 from .protocol_parser import ProtocolParser
-from .utils import Bet
+from .utils import Bet, store_bets
 import datetime
 import logging
 
@@ -40,7 +40,6 @@ class ServerProtocol:
                 self._socket_open = False
 
     def recv_messages(self):
-        bets = []
         try:
             while True:
                 msg_code = self._socket.recv(1)
@@ -48,20 +47,17 @@ class ServerProtocol:
                     # separator
                     continue
                 elif msg_code == b'\1':
-                    bets.append(self._recv_bet_request())
+                    with self._mutex:
+                        store_bets([self._recv_bet_request()])
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: 1')
                 elif msg_code == b'\2':
                     recv_bets = self._recv_bet_request_batch()
-                    bets.extend(recv_bets)
+                    with self._mutex:
+                        store_bets(recv_bets)
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(recv_bets)}')
-        except OSError:
-            # socket was closed
-            return bets
         except Exception as e:
-            logging.error(f"action: recv_messages | result: fail | error: {e}")
             raise e
-        
-        return bets
+    
     def _recv_u8(self):
         return int.from_bytes(self._socket.recv(1), byteorder='big')
 
@@ -90,11 +86,16 @@ class ServerProtocol:
         return Bet("1", name, surname, str(doc), birth_date.strftime('%Y-%m-%d'), str(number))
 
     def _recv_bet_request_batch(self):
-        n_bets = self._recv_u16()
-        bets = []
-        for _ in range(n_bets):
-            bets.append(self._recv_bet_request())
-        return bets
+        n_bets = 0
+        try:
+            n_bets = self._recv_u16()
+            bets = []
+            for _ in range(n_bets):
+                bets.append(self._recv_bet_request())
+            return bets
+        except Exception as e:
+            logging.error(f"action: apuesta_recibida | result: fail | cantidad: {n_bets} | error: {e}")
+            raise e
 
     def send_message(self, message: any):        
         try:
