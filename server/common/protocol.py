@@ -33,29 +33,38 @@ class ServerProtocol:
             self._running = False
             self._socket.close()
 
-    def recv_message(self):
-        try:
-            # Read message in chunks until we get EOF
-            chunks = []
-            received_eof = False
-            with self._mutex:
-                while not received_eof:
-                    chunk = self._socket.recv(1024)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
-                    if b'\0' in chunk:
-                        received_eof = True
-                        chunks[-1] = chunks[-1].rstrip(b'\0')
+    def recv_messages(self):
+        socket_closed = False
+        bets = []
+        while not socket_closed:
+            try:
+                # Read message in chunks until we get EOF
+                chunks = []
+                received_eof = False
+                with self._mutex:
+                    while not received_eof:
+                        chunk = self._socket.recv(1024)
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+                        if b'\0' in chunk:
+                            received_eof = True
+                            chunks[-1] = chunks[-1].rstrip(b'\0')
 
-            raw_msg = b''.join(chunks)
-            
-            addr = self._socket.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | raw_msg: {raw_msg}')
-            
-            return self._parser.parse(raw_msg)            
-        except OSError as e:
-            logging.error(f"action: receive_message | result: fail | error: {e}")
+                raw_msg = b''.join(chunks)
+                
+                addr = self._socket.getpeername()
+                logging.info(f'action: receive_message | result: success | ip: {addr[0]} | raw_msg: {raw_msg}')
+                
+                bets.append(self._parser.parse(raw_msg))
+            except OSError as e:
+                # socket was closed
+                logging.error(f"action: receive_message | result: fail | error: {e}")
+                socket_closed = True
+                continue
+            except Exception as e:
+                logging.error(f"action: receive_message | result: fail | error: {e}")
+                continue
 
     def send_message(self, message: any):        
         try:
