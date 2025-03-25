@@ -138,10 +138,6 @@ func (c *Client) StartClientLoop() {
 			log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return
 		}
-
-		if i+c.batch_size < len(bet_requests.Bets) {
-			time.Sleep(c.batch_period)
-		}
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
