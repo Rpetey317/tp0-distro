@@ -3,6 +3,7 @@ import logging
 import threading
 from .protocol_parser import ProtocolParser
 from .utils import store_bets
+import traceback
 
 class ServerProtocol:
     def __init__(self, port, listen_backlog):
@@ -25,7 +26,7 @@ class ServerProtocol:
                 # socket was closed
                 continue
             except Exception as e:
-                logging.error(f'action: server_loop | result: fail | error: {e}')
+                logging.error(f'action: server_loop | result: fail | error: {e} | traceback: {traceback.format_exc()}')
                 continue
             
         logging.info('action: shutdown | result: success')
