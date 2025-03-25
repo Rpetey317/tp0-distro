@@ -10,14 +10,12 @@ class ProtocolParser:
     def parse(self, message: bytes) -> any:
         if len(message) == 0:
             raise ValueError("Message is empty")
-        if message[-1] != 0:
-            raise ValueError("Message is not null-terminated")
         
         msg_enum = message[0]
         if msg_enum == 0:
-            return self._parse_bet_request(message[1:-1])
+            return self._parse_bet_request(message[1:])
         elif msg_enum == 1:
-            return self._parse_batch_bet_request(message[1:-1])
+            return self._parse_batch_bet_request(message[1:])
         else:
             raise ValueError(f"Invalid message type: {msg_enum}")
             
