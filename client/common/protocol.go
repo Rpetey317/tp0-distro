@@ -41,6 +41,9 @@ func (p *Protocol) Stop() error {
 }
 
 func (p *Protocol) sendMessage(message []byte) error {
+	nullTerm := []byte{0}
+	msg := append(message, nullTerm...)
+
 	// Lock only when sending message
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -49,8 +52,8 @@ func (p *Protocol) sendMessage(message []byte) error {
 		return errors.New("connection closed")
 	}
 	written := 0
-	for written < len(message) {
-		n, err := p.conn.Write(message[written:])
+	for written < len(msg) {
+		n, err := p.conn.Write(msg[written:])
 		if err != nil {
 			return err
 		}
@@ -113,9 +116,6 @@ func (p *Protocol) SendBetRequest(message BetRequest) error {
 	request := serializeSingleBetRequest(message)
 	msg := append(msgType, request...)
 
-	nullTerm := []byte{0}
-	msg = append(msg, nullTerm...)
-
 	return p.sendMessage(msg)
 }
 
@@ -125,9 +125,6 @@ func (p *Protocol) SendBetRequestBatch(message BetRequestBatch) error {
 		request := serializeSingleBetRequest(bet)
 		msg = append(msg, request...)
 	}
-
-	nullTerm := []byte{0}
-	msg = append(msg, nullTerm...)
 
 	return p.sendMessage(msg)
 }
