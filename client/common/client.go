@@ -117,6 +117,10 @@ func (c *Client) StartClientLoop() {
 	defer c.protocol.Stop()
 
 	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
+		if !c.running {
+			log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+			return
+		}
 		end := i + c.batch_size
 		if end > len(bet_requests.Bets) {
 			end = len(bet_requests.Bets)
