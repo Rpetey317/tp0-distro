@@ -40,6 +40,7 @@ class Server:
         
         while self._running:
             try:
+                bets = []
                 client_sock, _ = self._socket.accept()
                 self._protocol = ServerProtocol(client_sock)
                 bets = self._protocol.recv_message()
