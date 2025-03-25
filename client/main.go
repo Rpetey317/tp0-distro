@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
-	"client/common"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
 
 var log = logging.MustGetLogger("log")
