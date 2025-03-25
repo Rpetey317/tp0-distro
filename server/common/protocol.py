@@ -2,7 +2,6 @@ import socket
 import logging
 import threading
 from .protocol_parser import ProtocolParser
-from .models import BetRequest
 from .utils import store_bets
 
 class ServerProtocol:
