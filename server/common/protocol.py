@@ -3,7 +3,6 @@ import logging
 import threading
 from .protocol_parser import ProtocolParser
 from .utils import store_bets
-import traceback
 
 class ServerProtocol:
     def __init__(self, port, listen_backlog):
@@ -26,7 +25,7 @@ class ServerProtocol:
                 # socket was closed
                 continue
             except Exception as e:
-                logging.error(f'action: server_loop | result: fail | error: {e} | traceback: {traceback.format_exc()}')
+                logging.error(f'action: server_loop | result: fail | error: {e}')
                 continue
             
         logging.info('action: shutdown | result: success')
@@ -50,10 +49,10 @@ class ServerProtocol:
                     received_eof = True
                     chunks[-1] = chunks[-1].rstrip(b'\0')
 
-            raw_msg = b''.join(chunks).decode('utf-8')
+            raw_msg = b''.join(chunks)
             
             addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {[hex(b)[2:] for b in raw_msg.encode()]}')
+            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {raw_msg}')
             
             bet = self._parser.parse(raw_msg)
             with self._mutex:
