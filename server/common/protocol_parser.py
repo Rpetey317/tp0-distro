@@ -25,16 +25,16 @@ class ProtocolParser:
         pass
             
     def _parse_string(self, message: bytes, read: int) -> tuple[str, int]:
-        length = ntohs(int.from_bytes(message[read:read + 2]))
+        length = ntohs(int.from_bytes(message[read:read + 2], byteorder='big'))
         read += 2
         return message[read:read + length].decode('utf-8'), read + length
     
     def _parse_u32(self, message: bytes, read: int) -> tuple[int, int]:
-        value = ntohs(int.from_bytes(message[read:read + 4]))
+        value = ntohs(int.from_bytes(message[read:read + 4], byteorder='big'))
         return value, read + 4
     
     def _parse_date(self, message: bytes, read: int) -> tuple[datetime.date, int]:
-        year = ntohs(int.from_bytes(message[read:read + 2]))
+        year = ntohs(int.from_bytes(message[read:read + 2], byteorder='big'))
         month = message[read + 2]
         day = message[read + 3]
         return datetime.date(year, month, day), read + 4
