@@ -4,6 +4,7 @@ import signal
 import threading
 from .protocol import ServerProtocol
 from .utils import store_bets
+import traceback
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -52,6 +53,7 @@ class Server:
                 continue
             except Exception:
                 logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
+                logging.error(traceback.format_exc())
                 continue
             
         logging.info('action: shutdown | result: success')
