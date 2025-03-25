@@ -22,10 +22,12 @@ func NewProtocol(serverAddress string) *Protocol {
 func (p *Protocol) Start() error {
 	conn, err := net.Dial("tcp", p.serverAddress)
 	if err != nil {
+		log.Errorf("action: connect | result: fail | error: %v", err)
 		return err
 	}
 	p.conn = conn
 	p.running = true
+	log.Infof("action: connect | result: success | server_address: %s", p.serverAddress)
 	return nil
 }
 
