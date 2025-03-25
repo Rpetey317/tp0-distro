@@ -94,9 +94,6 @@ func serializeSingleBetRequest(request BetRequest) []byte {
 		byte(betNum),
 	}
 
-	// Null terminator
-	nullTerm := []byte{0}
-
 	// Combine all parts
 	serialized := append(nameLenBytes, nameBytes...)
 	serialized = append(serialized, surnameLenBytes...)
@@ -106,7 +103,6 @@ func serializeSingleBetRequest(request BetRequest) []byte {
 	serialized = append(serialized, monthByte)
 	serialized = append(serialized, dayByte)
 	serialized = append(serialized, betNumBytes...)
-	serialized = append(serialized, nullTerm...)
 
 	return serialized
 }
@@ -117,6 +113,9 @@ func (p *Protocol) SendBetRequest(message BetRequest) error {
 	request := serializeSingleBetRequest(message)
 	msg := append(msgType, request...)
 
+	nullTerm := []byte{0}
+	msg = append(msg, nullTerm...)
+
 	return p.sendMessage(msg)
 }
 
@@ -126,6 +125,9 @@ func (p *Protocol) SendBetRequestBatch(message BetRequestBatch) error {
 		request := serializeSingleBetRequest(bet)
 		msg = append(msg, request...)
 	}
+
+	nullTerm := []byte{0}
+	msg = append(msg, nullTerm...)
 
 	return p.sendMessage(msg)
 }
