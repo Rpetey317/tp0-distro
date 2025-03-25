@@ -14,6 +14,8 @@ class Server:
         
         self._protocol = None
         self._mutex = threading.Lock()
+        self._running = True
+        
     def run(self):
         """
         Dummy Server loop
