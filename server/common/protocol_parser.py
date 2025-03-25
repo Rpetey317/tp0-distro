@@ -16,11 +16,10 @@ class ProtocolParser:
             raise ValueError("Message is not null-terminated")
         
         msg_enum = message[0]
-        match msg_enum:
-            case 0:
-                return self._parse_bet_request(message[1:-1])
-            case _:
-                raise ValueError(f"Invalid message type: {msg_enum}")
+        if msg_enum == 0:
+            return self._parse_bet_request(message[1:-1])
+        else:
+            raise ValueError(f"Invalid message type: {msg_enum}")
             
     def serialize(self, message: any) -> bytes:
         pass
