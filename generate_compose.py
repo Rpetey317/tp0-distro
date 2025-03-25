@@ -98,7 +98,8 @@ def write_compose_file(services, output_file, num_clients):
         for i in range(1, num_clients + 1):
             client = deepcopy(client_template)
             client["container_name"] = f"client{i}"
-            client["environment"] = [f"CLI_ID={i}"]
+            client["environment"] = [x for x in client["environment"] if not x.startswith("CLI_ID")]
+            client["environment"].append(f"CLI_ID={i}")
             
             f.write(f"  client{i}:\n")
             write_dict(f, client, 4)
