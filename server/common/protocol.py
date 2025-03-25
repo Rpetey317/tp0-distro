@@ -4,6 +4,7 @@ import threading
 from .protocol_parser import ProtocolParser
 from .utils import Bet
 import datetime
+import logging
 
 class ServerProtocol:
     def __init__(self, socket: socket.socket):
@@ -69,7 +70,7 @@ class ServerProtocol:
     
     def _recv_string(self):
         length = self._recv_u16()
-        logger.debug(f"length: {length}")
+        logging.debug(f"length: {length}")
         return self._socket.recv(length).decode('utf-8')
     
     def _recv_date(self):
