@@ -128,7 +128,8 @@ func (c *Client) StartClientLoop() {
 		err := c.protocol.SendBetRequestBatch(batch)
 		if err != nil {
 			log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
-			continue
+			log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			return
 		}
 
 		if i+c.batch_size < len(bet_requests.Bets) {
