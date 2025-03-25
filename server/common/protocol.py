@@ -69,6 +69,7 @@ class ServerProtocol:
     
     def _recv_string(self):
         length = self._recv_u16()
+        logger.debug(f"length: {length}")
         return self._socket.recv(length).decode('utf-8')
     
     def _recv_date(self):
