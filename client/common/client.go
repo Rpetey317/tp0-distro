@@ -112,6 +112,7 @@ func (c *Client) Shutdown() {
 func (c *Client) StartClientLoop() {
 
 	bet_requests := readBetsFile(c.bets_file)
+	log.Infof("number_of_bets: %v", len(bet_requests.Bets))
 
 	c.protocol.Start()
 	defer c.protocol.Stop()
