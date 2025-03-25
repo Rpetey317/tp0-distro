@@ -3,7 +3,6 @@ module client
 go 1.24.1
 
 require (
-	github.com/7574-sistemas-distribuidos/docker-compose-init v0.0.0-20250312214429-4ab29d13bbdf
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/viper v1.20.0
@@ -25,5 +24,3 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/7574-sistemas-distribuidos/docker-compose-init/client/common => ./common

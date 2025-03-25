@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
+	"client/common"
 )
 
 var log = logging.MustGetLogger("log")
@@ -113,10 +113,10 @@ func main() {
 
 	bet := common.BetRequest{
 		Name:      v.GetString("nombre"),
-		LastName:  v.GetString("apellido"),
-		Birthdate: v.GetString("nacimiento"),
-		Document:  v.GetString("documento"),
-		Number:    v.GetString("numero"),
+		Surname:   v.GetString("apellido"),
+		Birthdate: v.GetTime("nacimiento"),
+		Document:  v.GetInt("documento"),
+		Number:    v.GetInt("numero"),
 	}
 
 	clientConfig := common.ClientConfig{
