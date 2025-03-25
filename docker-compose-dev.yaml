@@ -25,11 +25,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=1
-      - NOMBRE=Juan
-      - APELLIDO=Perez
-      - NACIMIENTO=1990-01-18
-      - DOCUMENTO=30465798
-      - NUMERO=3177
+      - CLI_NOMBRE=Juan
+      - CLI_APELLIDO=Perez
+      - CLI_NACIMIENTO=1990-01-18
+      - CLI_DOCUMENTO=30465798
+      - CLI_NUMERO=3177
     networks:
       - testing_net
     depends_on:
