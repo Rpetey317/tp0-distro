@@ -100,6 +100,8 @@ def write_compose_file(services, output_file, num_clients):
             client["container_name"] = f"client{i}"
             client["environment"] = [x for x in client["environment"] if not x.startswith("CLI_ID")]
             client["environment"].append(f"CLI_ID={i}")
+            client["volumes"].pop()
+            client["volumes"].append(f"./.data/agency-{i}.csv:/data.csv")
             
             f.write(f"  client{i}:\n")
             write_dict(f, client, 4)

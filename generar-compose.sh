@@ -6,4 +6,5 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
+unzip ./.data/dataset.zip -o -d ./.data
 python3 generate_compose.py $1 $2
