@@ -1,6 +1,5 @@
 from .utils import Bet
 import datetime
-import logging
 class ProtocolParser:
     """
     Helper class to parse messages from and to the client.
@@ -37,7 +36,6 @@ class ProtocolParser:
             
     def _parse_string(self, message: bytes, read: int) -> tuple[str, int]:
         length, read = self._parse_u16(message, read)
-        logging.info(f'action: parse_string | result: in_progress | length: {length} | read: {read}')
         return message[read:read + length].decode('utf-8'), read + length
     
     def _parse_date(self, message: bytes, read: int) -> tuple[datetime.date, int]:
