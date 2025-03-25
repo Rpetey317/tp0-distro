@@ -44,10 +44,9 @@ class Server:
                 bets = []
                 client_sock, _ = self._socket.accept()
                 self._protocol = ServerProtocol(client_sock)
-                bets = self._protocol.recv_message()
+                bets = self._protocol.recv_messages()
                 with self._mutex:
                     store_bets(bets)
-                logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
             except OSError:
                 # socket was closed
                 continue

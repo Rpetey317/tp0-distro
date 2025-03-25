@@ -39,26 +39,29 @@ class ServerProtocol:
                 self._socket.close()
                 self._socket_open = False
 
-    def recv_message(self):
+    def recv_messages(self):
         bets = []
-        sent_eof = False
         try:
-            while not sent_eof:
+            while True:
                 msg_code = self._socket.recv(1)
                 if msg_code == b'\0':
-                    sent_eof = True
+                    # separator
                     continue
                 elif msg_code == b'\1':
-                    return self._recv_bet_request()
+                    bets.append(self._recv_bet_request())
+                    logging.info(f'action: apuesta_recibida | result: success | cantidad: 1')
                 elif msg_code == b'\2':
-                    return self._recv_bet_request_batch()
+                    recv_bets = self._recv_bet_request_batch()
+                    bets.extend(recv_bets)
+                    logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(recv_bets)}')
         except OSError:
             # socket was closed
             return bets
         except Exception as e:
             logging.error(f"action: recv_messages | result: fail | error: {e}")
             raise e
-
+        
+        return bets
     def _recv_u8(self):
         return int.from_bytes(self._socket.recv(1), byteorder='big')
 
@@ -70,7 +73,6 @@ class ServerProtocol:
     
     def _recv_string(self):
         length = self._recv_u16()
-        logging.debug(f"length: {length}")
         return self._socket.recv(length).decode('utf-8')
     
     def _recv_date(self):
