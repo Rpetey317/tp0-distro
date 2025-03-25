@@ -36,10 +36,12 @@ class ServerProtocol:
     def recv_messages(self):
         socket_closed = False
         bets = []
+        excess_bytes = []
         while not socket_closed:
             try:
                 # Read message in chunks until we get EOF
-                chunks = []
+                chunks = [excess_bytes] if excess_bytes else []
+                excess_bytes = []
                 received_eof = False
                 with self._mutex:
                     while not received_eof:
@@ -49,7 +51,8 @@ class ServerProtocol:
                         chunks.append(chunk)
                         if b'\0' in chunk:
                             received_eof = True
-                            chunks[-1] = chunks[-1].rstrip(b'\0')
+                            excess_bytes = chunk.split(b'\0')[1]
+                            chunks[-1] = chunks[-1].split(b'\0')[0]
 
                 raw_msg = b''.join(chunks)
                 
