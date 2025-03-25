@@ -60,7 +60,7 @@ class ProtocolParser:
     def _parse_batch_bet_request(self, message: bytes) -> list[Bet]:
         read = 0
         bets = []
-        for _ in range(num_bets):
+        while read < len(message):
             bet, read = self._parse_single_bet_request(message, read)
             bets.append(bet)
         return bets
