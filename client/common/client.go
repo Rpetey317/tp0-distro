@@ -116,33 +116,27 @@ func (c *Client) StartClientLoop() {
 	c.protocol.Start()
 	defer c.protocol.Stop()
 
-	// for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
-	// 	end := i + c.batch_size
-	// 	if end > len(bet_requests.Bets) {
-	// 		end = len(bet_requests.Bets)
-	// 	}
+	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
+		end := i + c.batch_size
+		if end > len(bet_requests.Bets) {
+			end = len(bet_requests.Bets)
+		}
 
-	// 	batch := BetRequestBatch{
-	// 		Bets: bet_requests.Bets[i:end],
-	// 	}
+		batch := BetRequestBatch{
+			Bets: bet_requests.Bets[i:end],
+		}
+		log.Infof("nbets: %v", len(batch.Bets))
 
-	// 	err := c.protocol.SendBetRequestBatch(batch)
-	// 	if err != nil {
-	// 		log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
-	// 		log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
-	// 		return
-	// 	}
+		err := c.protocol.SendBetRequestBatch(batch)
+		if err != nil {
+			log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
+			log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			return
+		}
 
-	// 	if i+c.batch_size < len(bet_requests.Bets) {
-	// 		time.Sleep(c.batch_period)
-	// 	}
-	// }
-
-	err := c.protocol.SendBetRequestBatch(bet_requests)
-	if err != nil {
-		log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
-		log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
-		return
+		if i+c.batch_size < len(bet_requests.Bets) {
+			time.Sleep(c.batch_period)
+		}
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
