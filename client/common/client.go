@@ -87,6 +87,7 @@ func readBetsFile(bets_file string) BetRequestBatch {
 		bet_requests = append(bet_requests, bet_request)
 	}
 
+	log.Infof("action: read_bets_file | result: success | number_of_bets: %v", len(bet_requests))
 	return BetRequestBatch{Bets: bet_requests}
 }
 
