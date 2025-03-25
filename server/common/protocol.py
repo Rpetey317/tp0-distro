@@ -60,7 +60,7 @@ class ServerProtocol:
             raise e
 
     def _recv_u8(self):
-        return self._socket.recv(1)
+        return int.from_bytes(self._socket.recv(1), byteorder='big')
 
     def _recv_u16(self):
         return int.from_bytes(self._socket.recv(2), byteorder='big')
