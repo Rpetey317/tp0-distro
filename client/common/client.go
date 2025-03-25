@@ -18,14 +18,18 @@ type ClientConfig struct {
 	ID            string
 	ServerAddress string
 	BetsFile      string
+	MaxBatchSize  int
+	BatchPeriod   time.Duration
 }
 
 // Client Entity that encapsulates how
 type Client struct {
-	config    ClientConfig
-	protocol  *Protocol
-	running   bool
-	bets_file string
+	config       ClientConfig
+	protocol     *Protocol
+	running      bool
+	bets_file    string
+	batch_size   int
+	batch_period time.Duration
 }
 
 func readBetsFile(bets_file string) BetRequestBatch {
@@ -111,9 +115,25 @@ func (c *Client) StartClientLoop() {
 	c.protocol.Start()
 	defer c.protocol.Stop()
 
-	err := c.protocol.SendBetRequestBatch(bet_requests)
-	if err != nil {
-		log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
+	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
+		end := i + c.batch_size
+		if end > len(bet_requests.Bets) {
+			end = len(bet_requests.Bets)
+		}
+
+		batch := BetRequestBatch{
+			Bets: bet_requests.Bets[i:end],
+		}
+
+		err := c.protocol.SendBetRequestBatch(batch)
+		if err != nil {
+			log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
+			continue
+		}
+
+		if i+c.batch_size < len(bet_requests.Bets) {
+			time.Sleep(c.batch_period)
+		}
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)

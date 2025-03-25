@@ -115,6 +115,8 @@ func main() {
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
 		BetsFile:      "./data.csv",
+		MaxBatchSize:  v.GetInt("batch.max_amount"),
+		BatchPeriod:   v.GetDuration("batch.period"),
 	}
 
 	client := common.NewClient(clientConfig)
