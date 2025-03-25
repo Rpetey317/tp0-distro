@@ -23,21 +23,28 @@ class ProtocolParser:
             
     def serialize(self, message: any) -> bytes:
         pass
-            
-    def _parse_string(self, message: bytes, read: int) -> tuple[str, int]:
-        length = ntohs(int.from_bytes(message[read:read + 2], byteorder='big'))
-        read += 2
-        return message[read:read + length].decode('utf-8'), read + length
+    
+    def _parse_u8(self, message: bytes, read: int) -> tuple[int, int]:
+        value = message[read]
+        return value, read + 1
+    
+    def _parse_u16(self, message: bytes, read: int) -> tuple[int, int]:
+        value = ntohs(int.from_bytes(message[read:read + 2], byteorder='big'))
+        return value, read + 2
     
     def _parse_u32(self, message: bytes, read: int) -> tuple[int, int]:
         value = ntohs(int.from_bytes(message[read:read + 4], byteorder='big'))
         return value, read + 4
+            
+    def _parse_string(self, message: bytes, read: int) -> tuple[str, int]:
+        length, read = self._parse_u16(message, read)
+        return message[read:read + length].decode('utf-8'), read + length
     
     def _parse_date(self, message: bytes, read: int) -> tuple[datetime.date, int]:
-        year = ntohs(int.from_bytes(message[read:read + 2], byteorder='big'))
-        month = message[read + 2]
-        day = message[read + 3]
-        return datetime.date(year, month, day), read + 4
+        year, read = self._parse_u16(message, read)
+        month, read = self._parse_u8(message, read)
+        day, read = self._parse_u8(message, read)
+        return datetime.date(year, month, day), read
             
     def _parse_bet_request(self, message: bytes) -> Bet:
         read = 0
