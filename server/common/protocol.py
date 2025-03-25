@@ -1,5 +1,9 @@
 import socket
 import logging
+import threading
+from .protocol_parser import ProtocolParser
+from .models import BetRequest
+from .utils import store_bets
 
 class ServerProtocol:
     def __init__(self, port, listen_backlog):
@@ -9,8 +13,9 @@ class ServerProtocol:
         self._socket.listen(listen_backlog)
         
         self._running = True
+        self._parser = ProtocolParser()
         
-        logging.info(f"HOLAAAAAAAAAAAAAAAAAAAA")
+        self._mutex = threading.Lock()
         
     def run(self):
         while self._running:
@@ -45,12 +50,17 @@ class ServerProtocol:
                     received_eof = True
                     chunks[-1] = chunks[-1].rstrip(b'\0')
 
-            msg = b''.join(chunks).decode('utf-8')
+            raw_msg = b''.join(chunks).decode('utf-8')
             
             addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {raw_msg}')
             
-            self.send_message(f"{msg}\n", client_sock)
+            bet = self._parser.parse(raw_msg)
+            with self._mutex:
+                # Utils functions are not thread-safe, so we need a lock
+                store_bets([bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: ${bet.document} | numero: ${bet.number}')
+            
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
