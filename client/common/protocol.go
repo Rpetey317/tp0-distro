@@ -40,22 +40,38 @@ func (p *Protocol) Stop() error {
 	return nil
 }
 
-func (p *Protocol) SendMessage(message BetRequest) error {
-	// Message type 0 for bet request
-	msgType := []byte{0}
+func (p *Protocol) sendMessage(message []byte) error {
+	// Lock only when sending message
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
+	if !p.running {
+		return errors.New("connection closed")
+	}
+	written := 0
+	for written < len(message) {
+		n, err := p.conn.Write(message[written:])
+		if err != nil {
+			return err
+		}
+		written += n
+	}
+	return nil
+}
+
+func serializeSingleBetRequest(request BetRequest) []byte {
 	// Convert name to bytes with 2-byte length prefix
-	nameBytes := []byte(message.Name)
+	nameBytes := []byte(request.Name)
 	nameLen := uint16(len(nameBytes))
 	nameLenBytes := []byte{byte(nameLen >> 8), byte(nameLen)}
 
 	// Convert surname to bytes with 2-byte length prefix
-	surnameBytes := []byte(message.Surname)
+	surnameBytes := []byte(request.Surname)
 	surnameLen := uint16(len(surnameBytes))
 	surnameLenBytes := []byte{byte(surnameLen >> 8), byte(surnameLen)}
 
 	// Convert document number to 4 bytes
-	docNum := uint32(message.Document)
+	docNum := uint32(request.Document)
 	docBytes := []byte{
 		byte(docNum >> 24),
 		byte(docNum >> 16),
@@ -64,13 +80,13 @@ func (p *Protocol) SendMessage(message BetRequest) error {
 	}
 
 	// Convert birth date to 4 bytes (2 for year, 1 for month, 1 for day)
-	year := uint16(message.Birthdate.Year())
+	year := uint16(request.Birthdate.Year())
 	yearBytes := []byte{byte(year >> 8), byte(year)}
-	monthByte := byte(message.Birthdate.Month())
-	dayByte := byte(message.Birthdate.Day())
+	monthByte := byte(request.Birthdate.Month())
+	dayByte := byte(request.Birthdate.Day())
 
 	// Convert bet number to 4 bytes
-	betNum := uint32(message.Number)
+	betNum := uint32(request.Number)
 	betNumBytes := []byte{
 		byte(betNum >> 24),
 		byte(betNum >> 16),
@@ -82,31 +98,34 @@ func (p *Protocol) SendMessage(message BetRequest) error {
 	nullTerm := []byte{0}
 
 	// Combine all parts
-	msg := append(msgType, nameLenBytes...)
-	msg = append(msg, nameBytes...)
-	msg = append(msg, surnameLenBytes...)
-	msg = append(msg, surnameBytes...)
-	msg = append(msg, docBytes...)
-	msg = append(msg, yearBytes...)
-	msg = append(msg, monthByte)
-	msg = append(msg, dayByte)
-	msg = append(msg, betNumBytes...)
-	msg = append(msg, nullTerm...)
+	serialized := append(nameLenBytes, nameBytes...)
+	serialized = append(serialized, surnameLenBytes...)
+	serialized = append(serialized, surnameBytes...)
+	serialized = append(serialized, docBytes...)
+	serialized = append(serialized, yearBytes...)
+	serialized = append(serialized, monthByte)
+	serialized = append(serialized, dayByte)
+	serialized = append(serialized, betNumBytes...)
+	serialized = append(serialized, nullTerm...)
 
-	// Lock only when sending message
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
+	return serialized
+}
 
-	if !p.running {
-		return errors.New("connection closed")
+func (p *Protocol) SendBetRequest(message BetRequest) error {
+	// Message type 0 for bet request
+	msgType := []byte{0}
+	request := serializeSingleBetRequest(message)
+	msg := append(msgType, request...)
+
+	return p.sendMessage(msg)
+}
+
+func (p *Protocol) SendBetRequestBatch(message BetRequestBatch) error {
+	msg := []byte{1}
+	for _, bet := range message.Bets {
+		request := serializeSingleBetRequest(bet)
+		msg = append(msg, request...)
 	}
-	written := 0
-	for written < len(msg) {
-		n, err := p.conn.Write(msg[written:])
-		if err != nil {
-			return err
-		}
-		written += n
-	}
-	return nil
+
+	return p.sendMessage(msg)
 }

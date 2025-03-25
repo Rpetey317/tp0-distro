@@ -111,18 +111,10 @@ func main() {
 	// Print program config with debugging purposes
 	PrintConfig(v)
 
-	bet := common.BetRequest{
-		Name:      v.GetString("nombre"),
-		Surname:   v.GetString("apellido"),
-		Birthdate: v.GetTime("nacimiento"),
-		Document:  v.GetInt("documento"),
-		Number:    v.GetInt("numero"),
-	}
-
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		Bet:           bet,
+		BetsFile:      "./data.csv",
 	}
 
 	client := common.NewClient(clientConfig)
