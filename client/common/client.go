@@ -19,17 +19,15 @@ type ClientConfig struct {
 	ServerAddress string
 	BetsFile      string
 	MaxBatchSize  int
-	BatchPeriod   time.Duration
 }
 
 // Client Entity that encapsulates how
 type Client struct {
-	config       ClientConfig
-	protocol     *Protocol
-	running      bool
-	bets_file    string
-	batch_size   int
-	batch_period time.Duration
+	config     ClientConfig
+	protocol   *Protocol
+	running    bool
+	bets_file  string
+	batch_size int
 }
 
 func readBetsFile(bets_file string) BetRequestBatch {
@@ -95,10 +93,11 @@ func readBetsFile(bets_file string) BetRequestBatch {
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config:    config,
-		protocol:  NewProtocol(config.ServerAddress),
-		running:   true,
-		bets_file: config.BetsFile,
+		config:     config,
+		protocol:   NewProtocol(config.ServerAddress),
+		running:    true,
+		bets_file:  config.BetsFile,
+		batch_size: config.MaxBatchSize,
 	}
 	return client
 }
