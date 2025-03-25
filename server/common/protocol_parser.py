@@ -1,5 +1,4 @@
 from .utils import Bet
-from socket import ntohs
 import datetime
 import logging
 class ProtocolParser:
@@ -29,11 +28,11 @@ class ProtocolParser:
         return value, read + 1
     
     def _parse_u16(self, message: bytes, read: int) -> tuple[int, int]:
-        value = ntohs(int.from_bytes(message[read:read + 2], byteorder='big'))
+        value = int.from_bytes(message[read:read + 2], byteorder='big')
         return value, read + 2
     
     def _parse_u32(self, message: bytes, read: int) -> tuple[int, int]:
-        value = ntohs(int.from_bytes(message[read:read + 4], byteorder='big'))
+        value = int.from_bytes(message[read:read + 4], byteorder='big')
         return value, read + 4
             
     def _parse_string(self, message: bytes, read: int) -> tuple[str, int]:
