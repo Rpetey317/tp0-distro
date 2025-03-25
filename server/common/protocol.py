@@ -2,7 +2,6 @@ import socket
 import logging
 import threading
 from .protocol_parser import ProtocolParser
-from .utils import store_bets
 
 class ServerProtocol:
     def __init__(self, socket: socket.socket):
