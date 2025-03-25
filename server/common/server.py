@@ -49,7 +49,7 @@ class Server:
                     store_bets(bets)
             except OSError:
                 # socket was closed
-                continue
+                self.shutdown()
             except Exception as e:
                 logging.error(f'action: recv_messages | result: fail | error: {e}')
                 logging.error(traceback.format_exc())
