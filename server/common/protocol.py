@@ -52,7 +52,7 @@ class ServerProtocol:
             raw_msg = b''.join(chunks).decode('utf-8')
             
             addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {raw_msg}')
+            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {[hex(b)[2:] for b in raw_msg.encode()]}')
             
             bet = self._parser.parse(raw_msg)
             with self._mutex:
