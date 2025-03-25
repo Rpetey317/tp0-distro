@@ -37,6 +37,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
 	v.BindEnv("log", "level")
+	v.BindEnv("batch", "maxAmount")
 	v.BindEnv("nombre")
 	v.BindEnv("apellido")
 	v.BindEnv("nacimiento")
@@ -90,7 +91,7 @@ func PrintConfig(v *viper.Viper) {
 		v.GetString("id"),
 		v.GetString("server.address"),
 		v.GetString("log.level"),
-		v.GetInt("batch.max_amount"),
+		v.GetInt("batch.maxAmount"),
 		v.GetDuration("batch.period"),
 	)
 }
@@ -112,7 +113,7 @@ func main() {
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
 		BetsFile:      "./data.csv",
-		MaxBatchSize:  v.GetInt("batch.max_amount"),
+		MaxBatchSize:  v.GetInt("batch.maxAmount"),
 		BatchPeriod:   v.GetDuration("batch.period"),
 	}
 
