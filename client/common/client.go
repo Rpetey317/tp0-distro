@@ -113,6 +113,7 @@ func (c *Client) sendBets() error {
 		log.Errorf("action: send_bets | result: fail | error: %v", err)
 		return err
 	}
+	log.Debugf("leyendo apuestas de la agencia %d", agency_id)
 	bet_requests := readBetsFile(c.bets_file, agency_id)
 
 	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
