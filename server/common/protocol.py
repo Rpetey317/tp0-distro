@@ -97,7 +97,7 @@ class ServerProtocol:
             
             logging.info(f"action: send_message | result: success | n_winners: {n_winners}")
         except OSError as e:
-            # socket closing isn't necessary an error, so it gets logged as a warning
+            # socket closing isn't necessarily an error, so it gets logged as a warning
             logging.warning(f"action: send_message | result: fail | error: {e}")
             raise e
         except Exception as e:

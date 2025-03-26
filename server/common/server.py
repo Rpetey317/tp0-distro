@@ -2,9 +2,26 @@ import socket
 import logging
 import signal
 import threading
+from multiprocessing import Queue
 from .protocol import ServerProtocol
-from .utils import store_bets, load_bets, has_won
+from .utils import has_won, BetsMonitor
 import traceback
+
+def agency_thread(protocol: ServerProtocol, bets_monitor: BetsMonitor, winners_channel: Queue, done_channel: Queue):
+    agency_id, bets = protocol.recv_messages()
+    bets_monitor.add_bets(bets)
+    done_channel.put(agency_id)
+    
+    winners = winners_channel.get()
+    protocol.send_n_winners(winners)
+    protocol.shutdown()
+    
+class Agency:
+    thread: threading.Thread
+    protocol: ServerProtocol
+    winners_channel: Queue
+    done_channel: Queue
+    agency_id: int | None = None
 
 class Server:
     def __init__(self, port, listen_backlog, n_agencies):
@@ -16,7 +33,9 @@ class Server:
         self._running = True
         self._n_agencies = n_agencies
         
-        self._agencies = {}
+        self._agencies = []
+        self._bets = BetsMonitor()
+        
     def run(self):
         """
         Dummy Server loop
@@ -41,11 +60,14 @@ class Server:
         processed_agencies = 0
         while self._running and processed_agencies < self._n_agencies:
             try:
-                bets = []
                 client_sock, _ = self._socket.accept()
                 protocol = ServerProtocol(client_sock)
-                agency_id = protocol.recv_messages()
-                self._agencies[agency_id] = protocol
+                winners_channel = Queue()
+                done_channel = Queue()
+                agency_thread = threading.Thread(target=agency_thread, args=(protocol, self._bets, winners_channel, done_channel))
+                agency = Agency(agency_thread, protocol, winners_channel, done_channel)
+                agency_thread.start()
+                self._agencies.append(agency)
             except OSError:
                 # socket was closed
                 self.shutdown()
@@ -55,19 +77,22 @@ class Server:
                 continue
             finally:
                 processed_agencies += 1
-                
+        
+        for agency in self._agencies:
+            agency_id = agency.done_channel.get() # wait for every agency to finish
+            agency.agency_id = agency_id
         self.draw_lottery()
         logging.info('action: shutdown | result: success')
 
     def draw_lottery(self):
         try:
             logging.info('action: _sorteo | result: in_progress')
-            bets = load_bets()
+            bets = self._bets.get_bets()
             winners = [bet for bet in bets if has_won(bet)]
-            logging.debug(f'agencias: {self._agencies}')
-            for agency_id in self._agencies:
-                n_winners = len([bet for bet in winners if bet.agency == agency_id])
-                self._agencies[agency_id].send_n_winners(n_winners)
+            for agency in self._agencies:
+                agency_winners = [bet for bet in winners if bet.agency == agency.agency_id]
+                agency.winners_channel.put(len(agency_winners))
+                
             logging.info('action: sorteo | result: success')
         except Exception as e:
             logging.error(f'action: sorteo | result: fail | error: {e}')
@@ -75,7 +100,8 @@ class Server:
     def shutdown(self):
         logging.info('action: shutdown | result: in_progress')
         self._running = False
-        for protocol in self._agencies.values():
-            protocol.shutdown()
+        for agency in self._agencies:
+            agency.thread.join()
+            agency.protocol.shutdown()
         self._socket.close()
         
