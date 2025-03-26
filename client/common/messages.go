@@ -13,3 +13,6 @@ type BetRequest struct {
 type BetRequestBatch struct {
 	Bets []BetRequest
 }
+
+type FinishedBets struct {
+}

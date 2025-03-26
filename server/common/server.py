@@ -17,6 +17,8 @@ class Server:
         self._mutex = threading.Lock()
         self._running = True
         self._n_agencies = n_agencies
+        
+        self._agencies = {}
     def run(self):
         """
         Dummy Server loop
@@ -45,9 +47,8 @@ class Server:
                 bets = []
                 client_sock, _ = self._socket.accept()
                 self._protocol = ServerProtocol(client_sock)
-                bets = self._protocol.recv_messages()
-                with self._mutex:
-                    store_bets(bets)
+                agency_id = self._protocol.recv_messages()
+                self._agencies[agency_id] = self._protocol
             except OSError:
                 # socket was closed
                 self.shutdown()

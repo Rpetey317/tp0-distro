@@ -131,3 +131,9 @@ func (p *Protocol) SendBetRequestBatch(message BetRequestBatch) error {
 
 	return p.sendMessage(msg)
 }
+
+func (p *Protocol) SendFinishedBets(message FinishedBets) error {
+	msg := []byte{3}
+
+	return p.sendMessage(msg)
+}
