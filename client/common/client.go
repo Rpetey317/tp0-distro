@@ -115,6 +115,7 @@ func (c *Client) sendBets() error {
 	}
 	log.Debugf("leyendo apuestas de la agencia %d", agency_id)
 	bet_requests := readBetsFile(c.bets_file, agency_id)
+	log.Debugf("reminder, la agencia es %d", bet_requests.Agency)
 
 	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
 		if !c.running {
