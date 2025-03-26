@@ -25,6 +25,7 @@ class ServerProtocol:
     def recv_messages(self) -> str:
         try:
             agency_id = -1
+            bets = []
             while True:
                 msg_code = self._socket.recv(1)
                 
@@ -33,17 +34,16 @@ class ServerProtocol:
                     continue
                 
                 elif msg_code == b'\1':
-                    store_bets([self._recv_bet_request(1)])
+                    bets.append(self._recv_bet_request(1))
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: 1')
                     
                 elif msg_code == b'\2':
                     agency_id, recv_bets = self._recv_bet_request_batch()
-                    store_bets(recv_bets)
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(recv_bets)}')
-                    
+                    bets.extend(recv_bets)
                 elif msg_code == b'\3':
                     logging.info(f'action: recv_bets | result: success | agency_id: {agency_id}')
-                    return agency_id
+                    return agency_id, bets
                 
         except Exception as e:
             raise e
