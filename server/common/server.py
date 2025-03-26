@@ -64,6 +64,7 @@ class Server:
             logging.info('action: _sorteo | result: in_progress')
             bets = load_bets()
             winners = [bet for bet in bets if has_won(bet)]
+            logging.debug(f'agencias: {self._agencies}')
             for agency_id in self._agencies:
                 n_winners = len([bet for bet in winners if bet.agency == agency_id])
                 self._agencies[agency_id].send_n_winners(n_winners)
