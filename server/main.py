@@ -5,7 +5,7 @@ from common.server import Server
 import logging
 import os
 import time
-
+import traceback
 def initialize_config():
     """ Parse env variables or config file to find program config params
 
@@ -50,7 +50,14 @@ def main():
 
     # Initialize server and start server loop
     server = Server(port, listen_backlog, n_agencies)
-    server.run()
+    try:
+        server.run()
+    except Exception as e:
+        logging.error(f'action: main | result: fail | error: {e}')
+        logging.error(traceback.format_exc())
+    finally:
+        server.shutdown()
+        logging.info('action: shutdown | result: success')
     
     # This is for the tests, they may not get the logs otherwise
     time.sleep(5)

@@ -14,20 +14,6 @@ class ServerProtocol:
         
         self._mutex = threading.Lock()
         self._socket_open = True
-        
-    def run(self):
-        while self._running:
-            try:
-                client_sock, _ = self._socket.accept()
-                self._handle_client_connection(client_sock)
-            except OSError as e:
-                # socket was closed
-                continue
-            except Exception as e:
-                logging.error(f'action: server_loop | result: fail | error: {e}')
-                continue
-            
-        logging.info('action: shutdown | result: success')
 
     def shutdown(self):
         logging.info('action: shutdown | result: in_progress')

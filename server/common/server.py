@@ -13,7 +13,6 @@ class Server:
         self._socket.bind(('', port))
         self._socket.listen(listen_backlog)
         
-        self._protocol = None
         self._running = True
         self._n_agencies = n_agencies
         
@@ -44,9 +43,9 @@ class Server:
             try:
                 bets = []
                 client_sock, _ = self._socket.accept()
-                self._protocol = ServerProtocol(client_sock)
-                agency_id = self._protocol.recv_messages()
-                self._agencies[agency_id] = self._protocol
+                protocol = ServerProtocol(client_sock)
+                agency_id = protocol.recv_messages()
+                self._agencies[agency_id] = protocol
             except OSError:
                 # socket was closed
                 self.shutdown()
@@ -61,18 +60,21 @@ class Server:
         logging.info('action: shutdown | result: success')
 
     def draw_lottery(self):
-        logging.info('action: _sorteo | result: in_progress')
-        bets = load_bets()
-        winners = [bet for bet in bets if has_won(bet)]
-        for agency_id in self._agencies:
-            n_winners = len([bet for bet in winners if bet.agency == agency_id])
-            self._agencies[agency_id].send_message(n_winners)
-        logging.info('action: sorteo | result: success')
+        try:
+            logging.info('action: _sorteo | result: in_progress')
+            bets = load_bets()
+            winners = [bet for bet in bets if has_won(bet)]
+            for agency_id in self._agencies:
+                n_winners = len([bet for bet in winners if bet.agency == agency_id])
+                self._agencies[agency_id].send_n_winners(n_winners)
+            logging.info('action: sorteo | result: success')
+        except Exception as e:
+            logging.error(f'action: sorteo | result: fail | error: {e}')
 
     def shutdown(self):
         logging.info('action: shutdown | result: in_progress')
         self._running = False
-        if self._protocol:
-            self._protocol.shutdown()
+        for protocol in self._agencies.values():
+            protocol.shutdown()
         self._socket.close()
         
