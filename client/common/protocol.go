@@ -120,6 +120,8 @@ func (p *Protocol) SendBetRequest(message BetRequest) error {
 }
 
 func (p *Protocol) SendBetRequestBatch(message BetRequestBatch) error {
+	log.Debugf("enviando apuestas de la agencia %d", message.Agency)
+
 	msg := []byte{2}
 	agencyNum := uint16(message.Agency)
 	agencyNumBytes := []byte{byte(agencyNum >> 8), byte(agencyNum)}
