@@ -21,7 +21,7 @@ class Agency:
     protocol: ServerProtocol
     winners_channel: Queue
     done_channel: Queue
-    agency_id: int | None = None
+    agency_id: int
 
 class Server:
     def __init__(self, port, listen_backlog, n_agencies):
@@ -65,7 +65,7 @@ class Server:
                 winners_channel = Queue()
                 done_channel = Queue()
                 agency_thread = threading.Thread(target=agency_thread, args=(protocol, self._bets, winners_channel, done_channel))
-                agency = Agency(agency_thread, protocol, winners_channel, done_channel)
+                agency = Agency(agency_thread, protocol, winners_channel, done_channel, -1)
                 agency_thread.start()
                 self._agencies.append(agency)
             except OSError:
