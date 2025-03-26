@@ -4,7 +4,7 @@ from configparser import ConfigParser
 from common.server import Server
 import logging
 import os
-
+import time
 
 def initialize_config():
     """ Parse env variables or config file to find program config params
@@ -50,6 +50,9 @@ def main():
     # Initialize server and start server loop
     server = Server(port, listen_backlog)
     server.run()
+    
+    # This is for the tests, they may not get the logs otherwise
+    time.sleep(5)
 
 def initialize_log(logging_level):
     """

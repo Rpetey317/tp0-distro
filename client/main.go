@@ -141,4 +141,7 @@ func main() {
 	case <-done:
 		log.Info("action: finish | result: success")
 	}
+
+	// This is for the tests, they may not get the logs otherwise
+	time.Sleep(5 * time.Second)
 }
