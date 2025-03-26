@@ -1,7 +1,6 @@
 import socket
 import logging
 import threading
-from .protocol_parser import ProtocolParser
 from .utils import Bet, store_bets
 import datetime
 import logging
@@ -12,7 +11,6 @@ class ServerProtocol:
         self._socket = socket
         
         self._running = True
-        self._parser = ProtocolParser()
         
         self._mutex = threading.Lock()
         self._socket_open = True
