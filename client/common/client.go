@@ -107,18 +107,13 @@ func (c *Client) Shutdown() {
 	c.protocol.Stop()
 }
 
-// StartClientLoop Sends a single bet request to the server
-func (c *Client) StartClientLoop() {
-
+func (c *Client) sendBets() error {
 	bet_requests := readBetsFile(c.bets_file)
-
-	c.protocol.Start()
-	defer c.protocol.Stop()
 
 	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
 		if !c.running {
 			log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-			return
+			return nil
 		}
 		end := i + c.batch_size
 		if end > len(bet_requests.Bets) {
@@ -132,17 +127,53 @@ func (c *Client) StartClientLoop() {
 		err := c.protocol.SendBetRequestBatch(batch)
 		if err != nil {
 			log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
-			log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			return
+			return err
 		}
 	}
 
 	err := c.protocol.SendFinishedBets(FinishedBets{})
 	if err != nil {
 		log.Errorf("action: send_finished_bets | result: fail | error: %v", err)
-		log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) receiveWinners() (int, error) {
+	if !c.running {
+		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+		return 0, nil
+	}
+
+	winners, err := c.protocol.ReceiveWinners()
+	if err != nil {
+		log.Errorf("action: receive_winners | result: fail | error: %v", err)
+		return 0, err
+	}
+
+	return winners, nil
+}
+
+// StartClientLoop Sends a single bet request to the server
+func (c *Client) StartClientLoop() {
+
+	c.protocol.Start()
+	defer c.protocol.Stop()
+
+	err := c.sendBets()
+	if err != nil {
+		log.Errorf("action: send_bets | result: fail | error: %v", err)
 		return
 	}
+
+	winners, err := c.receiveWinners()
+	if err != nil {
+		log.Errorf("action: receive_winners | result: fail | error: %v", err)
+		return
+	}
+
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", winners)
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }

@@ -31,34 +31,36 @@ class ServerProtocol:
 
     def shutdown(self):
         logging.info('action: shutdown | result: in_progress')
-        with self._mutex:
-            self._running = False
-            if self._socket_open:
-                self._socket.close()
-                self._socket_open = False
+        self._running = False
+        if self._socket_open:
+            self._socket.close()
+            self._socket_open = False
 
     def recv_messages(self) -> str:
         try:
             agency_id = "-1"
             while True:
                 msg_code = self._socket.recv(1)
+                
                 if msg_code == b'\0':
                     # separator
                     continue
+                
                 elif msg_code == b'\1':
-                    with self._mutex:
-                        store_bets([self._recv_bet_request()])
+                    store_bets([self._recv_bet_request()])
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: 1')
+                    
                 elif msg_code == b'\2':
                     recv_bets = self._recv_bet_request_batch()
                     if len(recv_bets) > 0 and agency_id == "-1":
                         agency_id = recv_bets[0].agency
-                    with self._mutex:
-                        store_bets(recv_bets)
+                    store_bets(recv_bets)
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(recv_bets)}')
+                    
                 elif msg_code == b'\3':
                     logging.info(f'action: recv_bets | result: success')
                     return agency_id
+                
         except Exception as e:
             raise e
     
@@ -101,18 +103,14 @@ class ServerProtocol:
             logging.error(f"action: apuesta_recibida | result: fail | cantidad: {n_bets} | error: {e}")
             raise e
 
-    def send_message(self, message: any):        
+    def send_n_winners(self, n_winners: int):        
         try:
-            msg = f"{message}\0".encode('utf-8')
-            total_sent = 0
-            with self._mutex:
-                while total_sent < len(msg):
-                    sent = self._socket.send(msg[total_sent:])
-                    if sent == 0:
-                        raise OSError("Socket connection broken")
-                    total_sent += sent
+            msg = b'\1' + n_winners.to_bytes(4, byteorder='big')
+            total_sent = self._socket.send(msg)
+            if total_sent != len(msg):
+                raise OSError("Socket connection broken")
             
-            logging.info(f"action: send_message | result: success | msg: {message}")
+            logging.info(f"action: send_message | result: success | n_winners: {n_winners}")
         except OSError as e:
             # socket closing isn't necessary an error, so it gets logged as a warning
             logging.warning(f"action: send_message | result: fail | error: {e}")

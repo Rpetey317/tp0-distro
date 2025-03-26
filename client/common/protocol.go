@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 )
@@ -136,4 +137,28 @@ func (p *Protocol) SendFinishedBets(message FinishedBets) error {
 	msg := []byte{3}
 
 	return p.sendMessage(msg)
+}
+
+func (p *Protocol) ReceiveWinners() (int, error) {
+	// Read response type
+	responseType := make([]byte, 1)
+	if _, err := p.conn.Read(responseType); err != nil {
+		return 0, fmt.Errorf("failed to read response type: %v", err)
+	}
+
+	if responseType[0] != 1 {
+		return 0, fmt.Errorf("invalid response type: %d", responseType[0])
+	}
+
+	winnerBytes := make([]byte, 4)
+	if _, err := p.conn.Read(winnerBytes); err != nil {
+		return 0, fmt.Errorf("failed to read winner count: %v", err)
+	}
+
+	winners := uint32(winnerBytes[0])<<24 |
+		uint32(winnerBytes[1])<<16 |
+		uint32(winnerBytes[2])<<8 |
+		uint32(winnerBytes[3])
+
+	return int(winners), nil
 }

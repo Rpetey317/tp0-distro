@@ -14,7 +14,6 @@ class Server:
         self._socket.listen(listen_backlog)
         
         self._protocol = None
-        self._mutex = threading.Lock()
         self._running = True
         self._n_agencies = n_agencies
         
@@ -32,8 +31,7 @@ class Server:
         def handle_sigterm(signum, frame):
             if signum == signal.SIGTERM:
                 logging.info('action: shutdown | result: in_progress')
-                with self._mutex:
-                    self.shutdown()
+                self.shutdown()
                 logging.info('action: shutdown | result: success')
                 exit(0)
             else:
@@ -64,11 +62,11 @@ class Server:
 
     def draw_lottery(self):
         logging.info('action: _sorteo | result: in_progress')
-        with self._mutex:
-            bets = load_bets()
-            for bet in bets:
-                if has_won(bet):
-                    logging.info(f'action: ganadores | result: success | ganador: {bet.first_name} {bet.last_name} | numero: {bet.number}')
+        bets = load_bets()
+        winners = [bet for bet in bets if has_won(bet)]
+        for agency_id in self._agencies:
+            n_winners = len([bet for bet in winners if bet.agency == agency_id])
+            self._agencies[agency_id].send_message(n_winners)
         logging.info('action: sorteo | result: success')
 
     def shutdown(self):
