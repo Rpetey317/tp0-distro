@@ -30,7 +30,7 @@ type Client struct {
 	batch_size int
 }
 
-func readBetsFile(bets_file string) BetRequestBatch {
+func readBetsFile(bets_file string, agency_id int) BetRequestBatch {
 	var bet_requests []BetRequest
 
 	// Open and read the bets file
@@ -86,7 +86,7 @@ func readBetsFile(bets_file string) BetRequestBatch {
 	}
 
 	log.Infof("action: read_bets_file | result: success | number_of_bets: %v", len(bet_requests))
-	return BetRequestBatch{Bets: bet_requests}
+	return BetRequestBatch{Bets: bet_requests, Agency: agency_id}
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -108,7 +108,12 @@ func (c *Client) Shutdown() {
 }
 
 func (c *Client) sendBets() error {
-	bet_requests := readBetsFile(c.bets_file)
+	agency_id, err := strconv.Atoi(c.config.ID)
+	if err != nil {
+		log.Errorf("action: send_bets | result: fail | error: %v", err)
+		return err
+	}
+	bet_requests := readBetsFile(c.bets_file, agency_id)
 
 	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
 		if !c.running {
@@ -131,7 +136,7 @@ func (c *Client) sendBets() error {
 		}
 	}
 
-	err := c.protocol.SendFinishedBets(FinishedBets{})
+	err = c.protocol.SendFinishedBets(FinishedBets{})
 	if err != nil {
 		log.Errorf("action: send_finished_bets | result: fail | error: %v", err)
 		return err

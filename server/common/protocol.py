@@ -33,7 +33,7 @@ class ServerProtocol:
                     continue
                 
                 elif msg_code == b'\1':
-                    store_bets([self._recv_bet_request()])
+                    store_bets([self._recv_bet_request(1)])
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: 1')
                     
                 elif msg_code == b'\2':
@@ -44,7 +44,7 @@ class ServerProtocol:
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(recv_bets)}')
                     
                 elif msg_code == b'\3':
-                    logging.info(f'action: recv_bets | result: success')
+                    logging.info(f'action: recv_bets | result: success | agency_id: {agency_id}')
                     return agency_id
                 
         except Exception as e:
@@ -69,21 +69,22 @@ class ServerProtocol:
         day = self._recv_u8()
         return datetime.date(year, month, day)
 
-    def _recv_bet_request(self):
+    def _recv_bet_request(self, agency_id: int):
         name = self._recv_string()
         surname = self._recv_string()
         doc = self._recv_u32()
         birth_date = self._recv_date()
         number = self._recv_u32()
-        return Bet("1", name, surname, str(doc), birth_date.strftime('%Y-%m-%d'), str(number))
+        return Bet(str(agency_id), name, surname, str(doc), birth_date.strftime('%Y-%m-%d'), str(number))
 
     def _recv_bet_request_batch(self):
         n_bets = 0
         try:
+            agency_id = self._recv_u16()
             n_bets = self._recv_u16()
             bets = []
             for _ in range(n_bets):
-                bets.append(self._recv_bet_request())
+                bets.append(self._recv_bet_request(agency_id))
             return bets
         except Exception as e:
             logging.error(f"action: apuesta_recibida | result: fail | cantidad: {n_bets} | error: {e}")

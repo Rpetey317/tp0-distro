@@ -107,7 +107,6 @@ func serializeSingleBetRequest(request BetRequest) []byte {
 	serialized = append(serialized, monthByte)
 	serialized = append(serialized, dayByte)
 	serialized = append(serialized, betNumBytes...)
-
 	return serialized
 }
 
@@ -122,6 +121,9 @@ func (p *Protocol) SendBetRequest(message BetRequest) error {
 
 func (p *Protocol) SendBetRequestBatch(message BetRequestBatch) error {
 	msg := []byte{2}
+	agencyNum := uint16(message.Agency)
+	agencyNumBytes := []byte{byte(agencyNum >> 8), byte(agencyNum)}
+	msg = append(msg, agencyNumBytes...)
 	numBets := uint16(len(message.Bets))
 	numBetsBytes := []byte{byte(numBets >> 8), byte(numBets)}
 	msg = append(msg, numBetsBytes...)
