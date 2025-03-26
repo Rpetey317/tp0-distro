@@ -22,6 +22,13 @@ class Agency:
     winners_channel: Queue
     done_channel: Queue
     agency_id: int
+    
+    def __init__(self, thread: threading.Thread, protocol: ServerProtocol, winners_channel: Queue, done_channel: Queue, agency_id: int):
+        self.thread = thread
+        self.protocol = protocol
+        self.winners_channel = winners_channel
+        self.done_channel = done_channel
+        self.agency_id = agency_id
 
 class Server:
     def __init__(self, port, listen_backlog, n_agencies):
