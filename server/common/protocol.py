@@ -24,7 +24,7 @@ class ServerProtocol:
 
     def recv_messages(self) -> str:
         try:
-            agency_id = "-1"
+            agency_id = -1
             while True:
                 msg_code = self._socket.recv(1)
                 
@@ -37,9 +37,7 @@ class ServerProtocol:
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: 1')
                     
                 elif msg_code == b'\2':
-                    recv_bets = self._recv_bet_request_batch()
-                    if len(recv_bets) > 0 and agency_id == "-1":
-                        agency_id = recv_bets[0].agency
+                    agency_id, recv_bets = self._recv_bet_request_batch()
                     store_bets(recv_bets)
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(recv_bets)}')
                     
@@ -77,7 +75,7 @@ class ServerProtocol:
         number = self._recv_u32()
         return Bet(str(agency_id), name, surname, str(doc), birth_date.strftime('%Y-%m-%d'), str(number))
 
-    def _recv_bet_request_batch(self):
+    def _recv_bet_request_batch(self) -> tuple[int, list[Bet]]:
         n_bets = 0
         try:
             agency_id = self._recv_u16()
@@ -85,7 +83,7 @@ class ServerProtocol:
             bets = []
             for _ in range(n_bets):
                 bets.append(self._recv_bet_request(agency_id))
-            return bets
+            return agency_id, bets
         except Exception as e:
             logging.error(f"action: apuesta_recibida | result: fail | cantidad: {n_bets} | error: {e}")
             raise e
