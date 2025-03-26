@@ -64,9 +64,9 @@ class Server:
                 protocol = ServerProtocol(client_sock)
                 winners_channel = Queue()
                 done_channel = Queue()
-                agency_thread = threading.Thread(target=agency_thread, args=(protocol, self._bets, winners_channel, done_channel))
-                agency = Agency(agency_thread, protocol, winners_channel, done_channel, -1)
-                agency_thread.start()
+                agency_t = threading.Thread(target=agency_thread, args=(protocol, self._bets, winners_channel, done_channel))
+                agency = Agency(agency_t, protocol, winners_channel, done_channel, -1)
+                agency_t.start()
                 self._agencies.append(agency)
             except OSError:
                 # socket was closed
