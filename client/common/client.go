@@ -113,9 +113,7 @@ func (c *Client) sendBets() error {
 		log.Errorf("action: send_bets | result: fail | error: %v", err)
 		return err
 	}
-	log.Debugf("leyendo apuestas de la agencia %d", agency_id)
 	bet_requests := readBetsFile(c.bets_file, agency_id)
-	log.Debugf("reminder, la agencia es %d", bet_requests.Agency)
 
 	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
 		if !c.running {
@@ -128,7 +126,8 @@ func (c *Client) sendBets() error {
 		}
 
 		batch := BetRequestBatch{
-			Bets: bet_requests.Bets[i:end],
+			Bets:   bet_requests.Bets[i:end],
+			Agency: bet_requests.Agency,
 		}
 
 		err := c.protocol.SendBetRequestBatch(batch)
