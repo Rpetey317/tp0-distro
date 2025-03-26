@@ -63,7 +63,7 @@ class Server:
         logging.info('action: shutdown | result: success')
 
     def draw_lottery(self):
-        logging.info('action: sorteo | result: in_progress')
+        logging.info('action: _sorteo | result: in_progress')
         with self._mutex:
             bets = load_bets()
             for bet in bets:
