@@ -65,7 +65,7 @@ class Server:
                 winners_channel = Queue()
                 done_channel = Queue()
                 agency_t = threading.Thread(target=agency_thread, args=(protocol, self._bets, winners_channel, done_channel))
-                agency = Agency(agency_t, protocol, winners_channel, done_channel, -1)
+                agency = Agency(thread=agency_t, protocol=protocol, winners_channel=winners_channel, done_channel=done_channel, agency_id=-1)
                 agency_t.start()
                 self._agencies.append(agency)
             except OSError:
