@@ -90,6 +90,9 @@ def write_compose_file(services, output_file, num_clients):
         
         f.write("services:\n")
         
+        services["services"]["server"]["environment"] = [x for x in services["services"]["server"]["environment"] if not x.startswith("N_AGENCIES")]
+        services["services"]["server"]["environment"].append(f"N_AGENCIES={num_clients}")
+        
         f.write("  server:\n")
         write_dict(f, services["services"]["server"], 4)
         f.write("\n")
