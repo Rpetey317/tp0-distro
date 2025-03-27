@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -107,34 +108,60 @@ func (c *Client) Shutdown() {
 	c.protocol.Stop()
 }
 
-// StartClientLoop Sends a single bet request to the server
-func (c *Client) StartClientLoop() {
-
+func (c *Client) sendBets() error {
 	bet_requests := readBetsFile(c.bets_file)
 
-	c.protocol.Start()
-	defer c.protocol.Stop()
-
-	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
+	i := 0
+	for i < len(bet_requests.Bets) {
 		if !c.running {
 			log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-			return
+			return nil
 		}
-		end := i + c.batch_size
-		if end > len(bet_requests.Bets) {
-			end = len(bet_requests.Bets)
+
+		// Find how many bets we can fit in 8kb
+		batchSize := 0
+		for j := i; j < len(bet_requests.Bets) && j < i+c.batch_size; j++ {
+			candidateBatch := BetRequestBatch{
+				Bets: bet_requests.Bets[i : j+1],
+			}
+			if candidateBatch.Size()+2 > 8192 {
+				break
+			}
+			batchSize++
+		}
+
+		if batchSize == 0 {
+			// Single bet is too large
+			log.Errorf("action: send_bet_request_batch | result: fail | error: bet size exceeds 8kb")
+			return fmt.Errorf("bet size exceeds 8kb")
 		}
 
 		batch := BetRequestBatch{
-			Bets: bet_requests.Bets[i:end],
+			Bets: bet_requests.Bets[i : i+batchSize],
 		}
 
 		err := c.protocol.SendBetRequestBatch(batch)
 		if err != nil {
 			log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
-			log.Errorf("action: loop_finished | result: fail | client_id: %v | error: %v", c.config.ID, err)
-			return
+			return err
 		}
+
+		i += batchSize
+	}
+
+	return nil
+}
+
+// StartClientLoop Sends a single bet request to the server
+func (c *Client) StartClientLoop() {
+
+	c.protocol.Start()
+	defer c.protocol.Stop()
+
+	err := c.sendBets()
+	if err != nil {
+		log.Errorf("action: send_bets | result: fail | error: %v", err)
+		return
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
