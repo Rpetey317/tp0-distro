@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -132,8 +133,11 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
 	// Start client in a goroutine
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	done := make(chan bool)
 	go func() {
+		defer wg.Done()
 		client.StartClientLoop()
 		done <- true
 	}()
@@ -151,4 +155,5 @@ func main() {
 	case <-done:
 		log.Info("action: finish | result: success")
 	}
+	wg.Wait()
 }
