@@ -41,8 +41,8 @@ func (p *Protocol) Stop() error {
 }
 
 func (p *Protocol) SendMessage(message BetRequest) error {
-	// Message type 0 for bet request
-	msgType := []byte{0}
+	// Message type 1 for bet request
+	msgType := []byte{1}
 
 	// Convert name to bytes with 2-byte length prefix
 	nameBytes := []byte(message.Name)
