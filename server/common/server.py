@@ -14,7 +14,6 @@ class Server:
         self._socket.listen(listen_backlog)
         
         self._protocol = None
-        self._mutex = threading.Lock()
         self._running = True
         
     def run(self):
@@ -45,8 +44,7 @@ class Server:
                 client_sock, _ = self._socket.accept()
                 self._protocol = ServerProtocol(client_sock)
                 bets = self._protocol.recv_messages()
-                with self._mutex:
-                    store_bets(bets)
+                store_bets(bets)
             except OSError:
                 # socket was closed
                 self.shutdown()

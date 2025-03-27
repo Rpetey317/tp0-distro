@@ -26,3 +26,6 @@ func (b *BetRequestBatch) Size() int {
 	}
 	return 2 + bets_size
 }
+
+type FinishedBets struct {
+}

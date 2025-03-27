@@ -149,6 +149,12 @@ func (c *Client) sendBets() error {
 		i += batchSize
 	}
 
+	err := c.protocol.SendFinishedBets(FinishedBets{})
+	if err != nil {
+		log.Errorf("action: send_finished_bets | result: fail | error: %v", err)
+		return err
+	}
+
 	return nil
 }
 
