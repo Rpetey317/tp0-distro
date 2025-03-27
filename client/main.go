@@ -127,6 +127,7 @@ func main() {
 	wg.Add(1)
 	done := make(chan bool)
 	go func() {
+		defer wg.Done()
 		client.StartClientLoop()
 		done <- true
 	}()
