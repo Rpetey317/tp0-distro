@@ -38,20 +38,18 @@ class Server:
             
         signal.signal(signal.SIGTERM, handle_sigterm)
         
-        while self._running:
-            try:
-                bets = []
-                client_sock, _ = self._socket.accept()
-                self._protocol = ServerProtocol(client_sock)
-                bets = self._protocol.recv_messages()
-                store_bets(bets)
-            except OSError:
-                # socket was closed
-                self.shutdown()
-            except Exception as e:
-                logging.error(f'action: recv_messages | result: fail | error: {e}')
-                logging.error(traceback.format_exc())
-                continue
+        try:
+            bets = []
+            client_sock, _ = self._socket.accept()
+            self._protocol = ServerProtocol(client_sock)
+            bets = self._protocol.recv_messages()
+            store_bets(bets)
+        except OSError:
+            # socket was closed
+            self.shutdown()
+        except Exception as e:
+            logging.error(f'action: recv_messages | result: fail | error: {e}')
+            logging.error(traceback.format_exc())
             
         logging.info('action: shutdown | result: success')
 
