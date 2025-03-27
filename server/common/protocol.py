@@ -32,7 +32,7 @@ class ServerProtocol:
                     continue
                 
                 elif msg_code == b'\1':
-                    bet = self._recv_bet_request(1)
+                    bet = self._recv_bet_request()
                     separator = self._socket.recv(1)
                     if separator != b'\0':
                         raise Exception(f"action: recv_messages | result: fail | error: invalid message format. Expected null terminator, got {separator}")
