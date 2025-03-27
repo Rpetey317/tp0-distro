@@ -42,6 +42,7 @@ class Server:
             self._protocol = ServerProtocol(client_sock)
             bet = self._protocol.recv_messages()
             store_bets([bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
         except OSError:
             # socket was closed
             self.shutdown()
