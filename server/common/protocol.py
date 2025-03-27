@@ -42,6 +42,9 @@ class ServerProtocol:
                     logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(recv_bets)}')
                     bets.extend(recv_bets)
                 elif msg_code == b'\3':
+                    terminator = self._socket.recv(1) # null terminator
+                    if terminator != b'\0':
+                        raise Exception(f"action: recv_bets | result: fail | error: invalid message format. Expected null terminator, got {terminator}")
                     logging.info(f'action: recv_bets | result: success | agency_id: {agency_id}')
                     return agency_id, bets
                 
