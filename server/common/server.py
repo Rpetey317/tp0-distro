@@ -41,14 +41,13 @@ class Server:
         processed_agencies = 0
         while self._running and processed_agencies < self._n_agencies:
             try:
-                bets = []
                 client_sock, _ = self._socket.accept()
                 protocol = ServerProtocol(client_sock)
                 agency_id = protocol.recv_messages()
                 self._agencies[agency_id] = protocol
             except OSError:
                 # socket was closed
-                self.shutdown()
+                continue
             except Exception as e:
                 logging.error(f'action: recv_messages | result: fail | error: {e}')
                 logging.error(traceback.format_exc())
