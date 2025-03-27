@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -115,18 +116,34 @@ func (c *Client) sendBets() error {
 	}
 	bet_requests := readBetsFile(c.bets_file, agency_id)
 
-	for i := 0; i < len(bet_requests.Bets); i += c.batch_size {
+	i := 0
+	for i < len(bet_requests.Bets) {
 		if !c.running {
 			log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 			return nil
 		}
-		end := i + c.batch_size
-		if end > len(bet_requests.Bets) {
-			end = len(bet_requests.Bets)
+
+		// Find how many bets we can fit in 8kb
+		batchSize := 0
+		for j := i; j < len(bet_requests.Bets) && j < i+c.batch_size; j++ {
+			candidateBatch := BetRequestBatch{
+				Bets:   bet_requests.Bets[i : j+1],
+				Agency: bet_requests.Agency,
+			}
+			if candidateBatch.Size()+2 > 8192 {
+				break
+			}
+			batchSize++
+		}
+
+		if batchSize == 0 {
+			// Single bet is too large
+			log.Errorf("action: send_bet_request_batch | result: fail | error: bet size exceeds 8kb")
+			return fmt.Errorf("bet size exceeds 8kb")
 		}
 
 		batch := BetRequestBatch{
-			Bets:   bet_requests.Bets[i:end],
+			Bets:   bet_requests.Bets[i : i+batchSize],
 			Agency: bet_requests.Agency,
 		}
 
@@ -135,6 +152,8 @@ func (c *Client) sendBets() error {
 			log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
 			return err
 		}
+
+		i += batchSize
 	}
 
 	err = c.protocol.SendFinishedBets(FinishedBets{})
