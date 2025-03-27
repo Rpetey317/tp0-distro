@@ -1,22 +1,37 @@
 name: tp0
 services:
   server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    volumes:
+      - ./server/config.ini:/config.ini
     container_name: server
     image: server:latest
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - N_AGENCIES=1
     networks:
       - testing_net
 
   client1:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    volumes:
+      - ./client/config.yaml:/config.yaml
+      - ./.data/agency-1.csv:/data.csv
     container_name: client1
     image: client:latest
     entrypoint: /client
     environment:
       - CLI_ID=1
-      - CLI_LOG_LEVEL=DEBUG
+      - CLI_NOMBRE=Juan
+      - CLI_APELLIDO=Perez
+      - CLI_NACIMIENTO=1990-01-18
+      - CLI_DOCUMENTO=30465798
+      - CLI_NUMERO=3177
     networks:
       - testing_net
     depends_on:

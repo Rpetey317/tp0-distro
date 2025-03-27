@@ -3,7 +3,9 @@ package common
 import (
 	"bufio"
 	"fmt"
-	"net"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/op/go-logging"
@@ -12,78 +14,191 @@ import (
 var log = logging.MustGetLogger("log")
 
 // ClientConfig Configuration used by the client
+
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	LoopAmount    int
-	LoopPeriod    time.Duration
+	BetsFile      string
+	MaxBatchSize  int
 }
 
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
+	config     ClientConfig
+	protocol   *Protocol
+	running    bool
+	bets_file  string
+	batch_size int
+}
+
+func readBetsFile(bets_file string, agency_id int) BetRequestBatch {
+	var bet_requests []BetRequest
+
+	// Open and read the bets file
+	file, err := os.Open(bets_file)
+	if err != nil {
+		log.Errorf("action: read_bets_file | result: fail | error: %v", err)
+		return BetRequestBatch{Bets: bet_requests}
+	}
+	defer file.Close()
+
+	// Create CSV reader
+	scanner := bufio.NewScanner(file)
+
+	// Read each line and create bet requests
+	for scanner.Scan() {
+		line := scanner.Text()
+		record := strings.Split(line, ",")
+		if len(record) != 5 {
+			log.Errorf("action: read_bets_file | result: fail | error: invalid record length")
+			continue
+		}
+
+		// Parse fields from CSV
+		// Format: FirstName,LastName,Document,BirthDate,Number
+		name := record[0]
+		surname := record[1]
+		document, err := strconv.Atoi(record[2])
+		if err != nil {
+			log.Errorf("action: read_bets_file | result: fail | error: %v", err)
+			continue
+		}
+		birthdate, err := time.Parse("2006-01-02", record[3])
+		if err != nil {
+			log.Errorf("action: read_bets_file | result: fail | error: %v", err)
+			continue
+		}
+		number, err := strconv.Atoi(record[4])
+		if err != nil {
+			log.Errorf("action: read_bets_file | result: fail | error: %v", err)
+			continue
+		}
+
+		// Create bet request
+		bet_request := BetRequest{
+			Name:      name,
+			Surname:   surname,
+			Birthdate: birthdate,
+			Document:  document,
+			Number:    number,
+		}
+
+		bet_requests = append(bet_requests, bet_request)
+	}
+
+	log.Infof("action: read_bets_file | result: success | number_of_bets: %v", len(bet_requests))
+	return BetRequestBatch{Bets: bet_requests, Agency: agency_id}
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config: config,
+		config:     config,
+		protocol:   NewProtocol(config.ServerAddress),
+		running:    true,
+		bets_file:  config.BetsFile,
+		batch_size: config.MaxBatchSize,
 	}
 	return client
 }
 
-// CreateClientSocket Initializes client socket. In case of
-// failure, error is printed in stdout/stderr and exit 1
-// is returned
-func (c *Client) createClientSocket() error {
-	conn, err := net.Dial("tcp", c.config.ServerAddress)
+// Shutdown Gracefully stops the client
+func (c *Client) Shutdown() {
+	c.protocol.Stop()
+}
+
+func (c *Client) sendBets() error {
+	agency_id, err := strconv.Atoi(c.config.ID)
 	if err != nil {
-		log.Criticalf(
-			"action: connect | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+		log.Errorf("action: send_bets | result: fail | error: %v", err)
+		return err
 	}
-	c.conn = conn
+	bet_requests := readBetsFile(c.bets_file, agency_id)
+
+	i := 0
+	for i < len(bet_requests.Bets) {
+		if !c.running {
+			log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+			return nil
+		}
+
+		// Find how many bets we can fit in 8kb
+		batchSize := 0
+		for j := i; j < len(bet_requests.Bets) && j < i+c.batch_size; j++ {
+			candidateBatch := BetRequestBatch{
+				Bets:   bet_requests.Bets[i : j+1],
+				Agency: bet_requests.Agency,
+			}
+			if candidateBatch.Size()+2 > 8192 {
+				break
+			}
+			batchSize++
+		}
+
+		if batchSize == 0 {
+			// Single bet is too large
+			log.Errorf("action: send_bet_request_batch | result: fail | error: bet size exceeds 8kb")
+			return fmt.Errorf("bet size exceeds 8kb")
+		}
+
+		batch := BetRequestBatch{
+			Bets:   bet_requests.Bets[i : i+batchSize],
+			Agency: bet_requests.Agency,
+		}
+
+		err := c.protocol.SendBetRequestBatch(batch)
+		if err != nil {
+			log.Errorf("action: send_bet_request_batch | result: fail | error: %v", err)
+			return err
+		}
+
+		i += batchSize
+	}
+
+	err = c.protocol.SendFinishedBets(FinishedBets{})
+	if err != nil {
+		log.Errorf("action: send_finished_bets | result: fail | error: %v", err)
+		return err
+	}
+
 	return nil
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
-
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
-
-		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
-
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)
-
-		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
-
+func (c *Client) receiveWinners() (int, error) {
+	if !c.running {
+		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+		return 0, nil
 	}
+
+	winners, err := c.protocol.ReceiveWinners()
+	if err != nil {
+		log.Errorf("action: receive_winners | result: fail | error: %v", err)
+		return 0, err
+	}
+
+	return winners, nil
+}
+
+// StartClientLoop Sends a single bet request to the server
+func (c *Client) StartClientLoop() {
+
+	c.protocol.Start()
+	defer c.protocol.Stop()
+
+	err := c.sendBets()
+	if err != nil {
+		log.Errorf("action: send_bets | result: fail | error: %v", err)
+		return
+	}
+
+	winners, err := c.receiveWinners()
+	if err != nil {
+		log.Errorf("action: receive_winners | result: fail | error: %v", err)
+		return
+	}
+
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", winners)
+
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }

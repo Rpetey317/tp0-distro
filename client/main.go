@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/op/go-logging"
@@ -34,9 +36,13 @@ func InitConfig() (*viper.Viper, error) {
 	// Add env variables supported
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
-	v.BindEnv("loop", "period")
-	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+	v.BindEnv("batch", "maxAmount")
+	v.BindEnv("nombre")
+	v.BindEnv("apellido")
+	v.BindEnv("nacimiento")
+	v.BindEnv("documento")
+	v.BindEnv("numero")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -81,12 +87,11 @@ func InitLogger(logLevel string) error {
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
-	log.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_amount: %v | loop_period: %v | log_level: %s",
+	log.Infof("action: config | result: success | client_id: %s | server_address: %s | log_level: %s | batch_size: %d",
 		v.GetString("id"),
 		v.GetString("server.address"),
-		v.GetInt("loop.amount"),
-		v.GetDuration("loop.period"),
 		v.GetString("log.level"),
+		v.GetInt("batch.maxAmount"),
 	)
 }
 
@@ -106,10 +111,37 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		LoopAmount:    v.GetInt("loop.amount"),
-		LoopPeriod:    v.GetDuration("loop.period"),
+		BetsFile:      "./data.csv",
+		MaxBatchSize:  v.GetInt("batch.maxAmount"),
 	}
 
 	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
+	// Start client in a goroutine
+	done := make(chan bool)
+	go func() {
+		client.StartClientLoop()
+		done <- true
+	}()
+
+	// Wait for either completion or signal
+	select {
+	case sig := <-sigChan:
+		if sig == syscall.SIGTERM {
+			client.Shutdown()
+			log.Info("action: shutdown | result: success")
+			<-done
+		} else {
+			log.Warning("action: handle_signal | result: fail | warning: signal %v not handled", sig)
+		}
+	case <-done:
+		log.Info("action: finish | result: success")
+	}
+
+	// This is for the tests, they may not get the logs otherwise
+	time.Sleep(5 * time.Second)
 }
