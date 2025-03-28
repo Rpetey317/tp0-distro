@@ -8,13 +8,19 @@ from .utils import has_won, BetsMonitor
 import traceback
 
 def agency_thread(protocol: ServerProtocol, bets_monitor: BetsMonitor, winners_channel: Queue, done_channel: Queue):
-    agency_id, bets = protocol.recv_messages()
-    bets_monitor.add_bets(bets)
-    done_channel.put(agency_id)
-    
-    winners = winners_channel.get()
-    protocol.send_n_winners(winners)
-    protocol.shutdown()
+    try:
+        agency_id, bets = protocol.recv_messages()
+        bets_monitor.add_bets(bets)
+        done_channel.put(agency_id)
+        
+        winners = winners_channel.get()
+        protocol.send_n_winners(winners)
+        protocol.shutdown()
+    except OSError:
+        logging.info(f'action: agency_thread | result: success | warning: socket closed')
+    except Exception as e:
+        logging.error(f'action: agency_thread | result: fail | error: {e}')
+        logging.error(traceback.format_exc())
     
 class Agency:
     thread: threading.Thread
@@ -42,8 +48,8 @@ class Server:
         
         self._agencies = []
         self._bets = BetsMonitor()
-        
-    def run(self):
+        self._sigterm_received = False
+    def run(self) -> bool:
         """
         Dummy Server loop
 
@@ -55,15 +61,14 @@ class Server:
         
         def handle_sigterm(signum, frame):
             if signum == signal.SIGTERM:
-                logging.info('action: shutdown | result: in_progress')
                 self.shutdown()
-                logging.info('action: shutdown | result: success')
-                exit(0)
+                self._sigterm_received = True
             else:
                 logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
         signal.signal(signal.SIGTERM, handle_sigterm)
         
+        sigterm_received = False
         processed_agencies = 0
         while self._running and processed_agencies < self._n_agencies:
             try:
@@ -85,12 +90,15 @@ class Server:
             finally:
                 processed_agencies += 1
         
+        if self._sigterm_received:
+            return False
+        
         for agency in self._agencies:
             agency_id = agency.done_channel.get() # wait for every agency to finish
             agency.agency_id = agency_id
         self.draw_lottery()
-        logging.info('action: shutdown | result: success')
-
+        return not self._sigterm_received
+    
     def draw_lottery(self):
         try:
             logging.info('action: _sorteo | result: in_progress')
@@ -101,6 +109,9 @@ class Server:
                 agency.winners_channel.put(len(agency_winners))
                 
             logging.info('action: sorteo | result: success')
+        except OSError:
+            # things closed
+            return
         except Exception as e:
             logging.error(f'action: sorteo | result: fail | error: {e}')
 
@@ -108,7 +119,9 @@ class Server:
         logging.info('action: shutdown | result: in_progress')
         self._running = False
         for agency in self._agencies:
-            agency.thread.join()
             agency.protocol.shutdown()
+            agency.winners_channel.close()
+            agency.done_channel.close()
+            agency.thread.join()
         self._socket.close()
-        
+        logging.info('action: shutdown | result: success')

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -123,7 +124,10 @@ func main() {
 
 	// Start client in a goroutine
 	done := make(chan bool)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		client.StartClientLoop()
 		done <- true
 	}()
@@ -141,6 +145,8 @@ func main() {
 	case <-done:
 		log.Info("action: finish | result: success")
 	}
+
+	wg.Wait()
 
 	// This is for the tests, they may not get the logs otherwise
 	time.Sleep(5 * time.Second)
