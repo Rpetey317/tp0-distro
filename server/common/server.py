@@ -14,6 +14,7 @@ class Server:
         
         self._protocol = None
         self._running = True
+        self._sigterm_received = False
         
     def run(self):
         """
@@ -27,11 +28,8 @@ class Server:
         
         def handle_sigterm(signum, frame):
             if signum == signal.SIGTERM:
-                logging.info('action: shutdown | result: in_progress')
-                with self._mutex:
-                    self.shutdown()
-                logging.info('action: shutdown | result: success')
-                exit(0)
+                self.shutdown()
+                self._sigterm_received = True
             else:
                 logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
@@ -45,12 +43,12 @@ class Server:
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
         except OSError:
             # socket was closed
-            self.shutdown()
+            return not self._sigterm_received
         except Exception as e:
             logging.error(f'action: recv_messages | result: fail | error: {e}')
             logging.error(traceback.format_exc())
             
-        logging.info('action: shutdown | result: success')
+        return not self._sigterm_received
 
     def shutdown(self):
         logging.info('action: shutdown | result: in_progress')
@@ -58,4 +56,4 @@ class Server:
         if self._protocol:
             self._protocol.shutdown()
         self._socket.close()
-        
+        logging.info('action: shutdown | result: success')
