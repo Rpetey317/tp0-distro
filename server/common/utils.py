@@ -1,6 +1,6 @@
 import csv
 import datetime
-import time
+import threading
 
 
 """ Bets storage location. """
@@ -51,10 +51,12 @@ def load_bets() -> list[Bet]:
 
 class BetsMonitor:
     def __init__(self):
-        pass
+        self._lock = threading.Lock()
 
     def add_bets(self, bets: list[Bet]):
-        store_bets(bets)
+        with self._lock:
+            store_bets(bets)
         
     def get_bets(self) -> list[Bet]:
-        return load_bets()
+        with self._lock:
+            return list(load_bets())

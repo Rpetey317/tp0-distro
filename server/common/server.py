@@ -64,7 +64,7 @@ class Server:
                 logging.info('action: shutdown | result: in_progress')
                 self.shutdown()
                 logging.info('action: shutdown | result: success')
-                exit(0)
+                exit(0) # TODO: sacarlo
             else:
                 logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
@@ -115,6 +115,8 @@ class Server:
         self._running = False
         for agency in self._agencies:
             agency.protocol.shutdown()
+            agency.winners_channel.close()
+            agency.done_channel.close()
             agency.thread.join()
         self._socket.close()
         
