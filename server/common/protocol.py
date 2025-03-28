@@ -22,11 +22,11 @@ class ServerProtocol:
             self._socket.close()
             self._socket_open = False
 
-    def recv_messages(self) -> str:
+    def recv_messages(self) -> tuple[int, list[Bet]]:
         try:
             agency_id = -1
             bets = []
-            while True:
+            while self._socket_open:
                 msg_code = self._socket.recv(1)
                 
                 if msg_code == b'\0':

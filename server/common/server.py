@@ -8,13 +8,19 @@ from .utils import has_won, BetsMonitor
 import traceback
 
 def agency_thread(protocol: ServerProtocol, bets_monitor: BetsMonitor, winners_channel: Queue, done_channel: Queue):
-    agency_id, bets = protocol.recv_messages()
-    bets_monitor.add_bets(bets)
-    done_channel.put(agency_id)
-    
-    winners = winners_channel.get()
-    protocol.send_n_winners(winners)
-    protocol.shutdown()
+    try:
+        agency_id, bets = protocol.recv_messages()
+        bets_monitor.add_bets(bets)
+        done_channel.put(agency_id)
+        
+        winners = winners_channel.get()
+        protocol.send_n_winners(winners)
+        protocol.shutdown()
+    except OSError:
+        logging.info(f'action: agency_thread | result: success | warning: socket closed')
+    except Exception as e:
+        logging.error(f'action: agency_thread | result: fail | error: {e}')
+        logging.error(traceback.format_exc())
     
 class Agency:
     thread: threading.Thread
@@ -108,7 +114,7 @@ class Server:
         logging.info('action: shutdown | result: in_progress')
         self._running = False
         for agency in self._agencies:
-            agency.thread.join()
             agency.protocol.shutdown()
+            agency.thread.join()
         self._socket.close()
         
