@@ -57,7 +57,6 @@ def main():
         logging.error(traceback.format_exc())
     finally:
         if shutdown_pending:
-            logging.info("en efecto, tocó sigterm")
             server.shutdown()
         logging.info('action: shutdown | result: success')
     
