@@ -29,7 +29,7 @@ class Server:
             
         signal.signal(signal.SIGTERM, handle_sigterm)
         
-        while not self._server_socket.closed and not self._sigterm_received:
+        while not self._sigterm_received:
             try:
                 self._current_client_sock = self.__accept_new_connection()
                 self.__handle_client_connection()
