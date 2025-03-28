@@ -4,7 +4,7 @@ from configparser import ConfigParser
 from common.server import Server
 import logging
 import os
-
+import traceback
 
 def initialize_config():
     """ Parse env variables or config file to find program config params
@@ -49,7 +49,14 @@ def main():
 
     # Initialize server and start server loop
     server = Server(port, listen_backlog)
-    server.run()
+    try:
+        shutdown_pending = server.run()
+    except Exception as e:
+        logging.error(f'action: main | result: fail | error: {e}')
+        logging.error(traceback.format_exc())
+    finally:
+        if shutdown_pending:
+            server.shutdown()
 
 def initialize_log(logging_level):
     """
