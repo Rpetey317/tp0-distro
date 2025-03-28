@@ -17,7 +17,9 @@ class Server:
         self._n_agencies = n_agencies
         
         self._agencies = {}
-    def run(self):
+        self._sigterm_received = False
+        
+    def run(self) -> bool:
         """
         Dummy Server loop
 
@@ -29,10 +31,8 @@ class Server:
         
         def handle_sigterm(signum, frame):
             if signum == signal.SIGTERM:
-                logging.info('action: shutdown | result: in_progress')
                 self.shutdown()
-                logging.info('action: shutdown | result: success')
-                exit(0)
+                self._sigterm_received = True
             else:
                 logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
@@ -54,9 +54,12 @@ class Server:
                 continue
             finally:
                 processed_agencies += 1
-                
+        
+        if self._sigterm_received:
+            return False
+        
         self.draw_lottery()
-        logging.info('action: shutdown | result: success')
+        return not self._sigterm_received
 
     def draw_lottery(self):
         try:
@@ -68,6 +71,9 @@ class Server:
                 n_winners = len([bet for bet in winners if bet.agency == agency_id])
                 self._agencies[agency_id].send_n_winners(n_winners)
             logging.info('action: sorteo | result: success')
+        except OSError:
+            # things closed due to sigterm
+            return
         except Exception as e:
             logging.error(f'action: sorteo | result: fail | error: {e}')
 
@@ -77,4 +83,4 @@ class Server:
         for protocol in self._agencies.values():
             protocol.shutdown()
         self._socket.close()
-        
+        logging.info('action: shutdown | result: success')

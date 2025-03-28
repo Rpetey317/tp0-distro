@@ -50,14 +50,15 @@ def main():
 
     # Initialize server and start server loop
     server = Server(port, listen_backlog, n_agencies)
+    shutdown_pending = True
     try:
-        server.run()
+        shutdown_pending = server.run() 
     except Exception as e:
         logging.error(f'action: main | result: fail | error: {e}')
         logging.error(traceback.format_exc())
     finally:
-        server.shutdown()
-        logging.info('action: shutdown | result: success')
+        if shutdown_pending:
+            server.shutdown()
     
     # This is for the tests, they may not get the logs otherwise
     time.sleep(5)
