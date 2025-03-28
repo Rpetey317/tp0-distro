@@ -49,7 +49,14 @@ def main():
 
     # Initialize server and start server loop
     server = Server(port, listen_backlog)
-    server.run()
+    shutdown_pending = True
+    try:
+        shutdown_pending = server.run()
+    except Exception as e:
+        logging.error(f'action: main | result: fail | error: {e}')
+    finally:
+        if shutdown_pending:
+            server.shutdown()
     
     # This is for the tests, they may not get the logs otherwise
     time.sleep(5)

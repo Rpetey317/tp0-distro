@@ -1,7 +1,6 @@
 import socket
 import logging
 import signal
-import threading
 from .protocol import ServerProtocol
 from .utils import store_bets
 import traceback
@@ -15,7 +14,7 @@ class Server:
         
         self._protocol = None
         self._running = True
-        
+        self._received_sigterm = False
     def run(self):
         """
         Dummy Server loop
@@ -28,11 +27,8 @@ class Server:
         
         def handle_sigterm(signum, frame):
             if signum == signal.SIGTERM:
-                logging.info('action: shutdown | result: in_progress')
-                with self._mutex:
-                    self.shutdown()
-                logging.info('action: shutdown | result: success')
-                exit(0)
+                self.shutdown()
+                self._received_sigterm = True
             else:
                 logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
@@ -46,12 +42,12 @@ class Server:
             store_bets(bets)
         except OSError:
             # socket was closed
-            self.shutdown()
+            return not self._received_sigterm
         except Exception as e:
             logging.error(f'action: recv_messages | result: fail | error: {e}')
             logging.error(traceback.format_exc())
             
-        logging.info('action: shutdown | result: success')
+        return not self._received_sigterm
 
     def shutdown(self):
         logging.info('action: shutdown | result: in_progress')
@@ -59,4 +55,4 @@ class Server:
         if self._protocol:
             self._protocol.shutdown()
         self._socket.close()
-        
+        logging.info('action: shutdown | result: success')
