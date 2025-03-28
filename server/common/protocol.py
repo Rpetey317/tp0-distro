@@ -61,6 +61,10 @@ class ServerProtocol:
     def _recv_u32(self):
         return int.from_bytes(self._recv_all(4), byteorder='big')
     
+    def _recv_string(self):
+        length = self._recv_u16()
+        return self._recv_all(length).decode('utf-8')
+    
     def _recv_date(self):
         year = self._recv_u16()
         month = self._recv_u8()
