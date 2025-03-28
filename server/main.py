@@ -58,7 +58,6 @@ def main():
     finally:
         if shutdown_pending:
             server.shutdown()
-        logging.info('action: shutdown | result: success')
     
     # This is for the tests, they may not get the logs otherwise
     time.sleep(5)

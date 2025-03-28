@@ -48,7 +48,7 @@ class Server:
         
         self._agencies = []
         self._bets = BetsMonitor()
-        
+        self._sigterm_received = False
     def run(self) -> bool:
         """
         Dummy Server loop
@@ -61,9 +61,8 @@ class Server:
         
         def handle_sigterm(signum, frame):
             if signum == signal.SIGTERM:
-                logging.info('action: shutdown | result: in_progress')
                 self.shutdown()
-                logging.info('action: shutdown | result: success')
+                self._sigterm_received = True
             else:
                 logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
@@ -91,15 +90,14 @@ class Server:
             finally:
                 processed_agencies += 1
         
-        if sigterm_received:
+        if self._sigterm_received:
             return False
         
         for agency in self._agencies:
             agency_id = agency.done_channel.get() # wait for every agency to finish
             agency.agency_id = agency_id
         self.draw_lottery()
-        logging.info('action: shutdown | result: success')
-        return True
+        return not self._sigterm_received
     
     def draw_lottery(self):
         try:
@@ -111,6 +109,9 @@ class Server:
                 agency.winners_channel.put(len(agency_winners))
                 
             logging.info('action: sorteo | result: success')
+        except OSError:
+            # things closed
+            return
         except Exception as e:
             logging.error(f'action: sorteo | result: fail | error: {e}')
 
@@ -123,4 +124,4 @@ class Server:
             agency.done_channel.close()
             agency.thread.join()
         self._socket.close()
-        
+        logging.info('action: shutdown | result: success')

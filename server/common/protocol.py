@@ -16,11 +16,12 @@ class ServerProtocol:
         self._socket_open = True
 
     def shutdown(self):
-        logging.info('action: shutdown | result: in_progress')
+        logging.info('action: protocol_shutdown | result: in_progress')
         self._running = False
         if self._socket_open:
             self._socket.close()
             self._socket_open = False
+        logging.info('action: protocol_shutdown | result: success')
 
     def recv_messages(self) -> tuple[int, list[Bet]]:
         try:
