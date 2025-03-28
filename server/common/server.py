@@ -64,7 +64,6 @@ class Server:
                 logging.info('action: shutdown | result: in_progress')
                 self.shutdown()
                 logging.info('action: shutdown | result: success')
-                # exit(0) # TODO: sacarlo
             else:
                 logging.warning(f'action: handle_signal | result: fail | warning: signal {signum} not handled')
             
