@@ -49,7 +49,7 @@ class Server:
         self._agencies = []
         self._bets = BetsMonitor()
         
-    def run(self):
+    def run(self) -> bool:
         """
         Dummy Server loop
 
@@ -70,6 +70,7 @@ class Server:
             
         signal.signal(signal.SIGTERM, handle_sigterm)
         
+        sigterm_received = False
         processed_agencies = 0
         while self._running and processed_agencies < self._n_agencies:
             try:
@@ -91,12 +92,16 @@ class Server:
             finally:
                 processed_agencies += 1
         
+        if sigterm_received:
+            return False
+        
         for agency in self._agencies:
             agency_id = agency.done_channel.get() # wait for every agency to finish
             agency.agency_id = agency_id
         self.draw_lottery()
         logging.info('action: shutdown | result: success')
-
+        return True
+    
     def draw_lottery(self):
         try:
             logging.info('action: _sorteo | result: in_progress')
